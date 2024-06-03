@@ -59,7 +59,6 @@ export function Parser(logger: Logger, deepObject: DeepObject, dates: Dates) {
       // So for single entry arrays we can use the return.
       const parsed = Number.parseFloat(value);
       const isArray = check.isArray(value);
-      logger.trace('isArray', isArray);
 
       return isArray ? [parsed] : parsed;
     }

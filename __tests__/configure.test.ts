@@ -261,7 +261,7 @@ describe('configure', () => {
     const tag: string = "<etq>";
     expect(result).toEqual(query);
     expect(debug).toHaveBeenCalled();
-    expect(trace).toHaveBeenCalledTimes(8);
+    expect(trace).toHaveBeenCalledTimes(7);
     expect(trace).toHaveBeenNthCalledWith(
       1
       tag,
@@ -301,18 +301,11 @@ describe('configure', () => {
       6
       tag,
       expect.stringContaining('TRACE'),
-      'isArray',
-      JSON.stringify(['one', 'two'], null, 2)
-    );
-    expect(trace).toHaveBeenNthCalledWith(
-      7
-      tag,
-      expect.stringContaining('TRACE'),
       'key',
       'string'
     );
     expect(trace).toHaveBeenNthCalledWith(
-      8
+      7
       tag,
       expect.stringContaining('TRACE'),
       'query',
