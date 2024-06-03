@@ -13,7 +13,7 @@ export function Logger(
   function parseObjects(args: any[]) {
     return args.map((arg) => {
       return (check.isArray(arg) || check.isJsonObject(arg))
-        ? JSON.stringify(args, null, 2)
+        ? JSON.stringify(arg, null, 2)
         : arg
     });
   }

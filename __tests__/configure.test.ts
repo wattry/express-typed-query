@@ -197,13 +197,12 @@ describe('configure', () => {
     const handler = app.get(setString);
     const result = handler('string=one&string=two');
 
-    expect(result).toEqual({
-      string: ['one', 'two']
-    });
+    expect(result).toEqual({ string: ['one', 'two'] });
     expect(debug).toHaveBeenCalledWith(
       expect.stringContaining('DEBUG'),
       'Duplicate key reusing existing entry',
-      'string'
+      'string',
+      JSON.stringify(['one', 'two'], null, 2)
     );
   });
 

@@ -32,10 +32,8 @@ export function configure(app: Application, options?: Options) {
       const value = query[key];
       const isArray = isArrayRegex.test(key);
 
-      logger.trace('value', value);
-
       if (value) {
-        logger.debug('Duplicate key reusing existing entry', key);
+        logger.debug('Duplicate key reusing existing entry', key, value);
       } else {
         const all = entries.getAll(key);
         logger.trace('entries', all);
