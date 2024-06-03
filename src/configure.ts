@@ -43,7 +43,13 @@ export function configure(app: Application, options?: Options) {
 
           if (all.length > 1 || isArray) {
             const normalizedKey = key.replace(/\[\]$/, '');
+            console.log(normalizedKey);
+
             // There may be multiple entries for the same key.
+            const parsed = parse(all);
+
+            console.log(parsed, all);
+
             query[normalizedKey] = parse(all);
           } else {
             query[key] = parse(all[0]);

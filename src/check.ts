@@ -1,6 +1,18 @@
 const objectRegex = /{[\s\S]*}/gm;
 const arrayRegex = /\[[\s\S]*\]/gm;
 
+// This works a little different because we're going to use the value that is returned
+// to avoid making the same call several times.
+export function isNumber(value: any) {
+  const number = Number.parseFloat(value);
+
+  if (!Number.isNaN(number) && isFinite(value)) {
+    return true;
+  }
+
+  return false;
+}
+
 export function isString(value: any): boolean {
   return typeof value === 'string';
 }
@@ -23,7 +35,7 @@ export function isDate(value: any): boolean {
 }
 
 export function isArray(value: any): boolean {
-  return value instanceof Array || Object.prototype.toString.call(value) === '[object Array]';
+  return value instanceof Array || Object.prototype.toString.call(value) === '[object Array]' || Array.isArray(value);
 }
 
 export function isFunction(value: any): boolean {
@@ -38,4 +50,4 @@ export function isJsonObject(value: any): boolean {
   return !(value === null) && value instanceof Object && Object.prototype.toString.call(value) === '[object Object]';
 }
 
-export default { isString, isBoolean, isDate, isArray, isFunction,isJsonObject, isJsonString };
+export default { isNumber, isString, isBoolean, isDate, isArray, isFunction,isJsonObject, isJsonString };

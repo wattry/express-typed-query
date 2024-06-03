@@ -35,6 +35,14 @@ beforeAll(() => {
   jest.spyOn(app, 'get');
 });
 
+beforeEach(() => {
+  error.mockClear();
+  warn.mockClear();
+  info.mockClear();
+  debug.mockClear();
+  trace.mockClear();
+})
+
 /** ********************************************************************
   *                            Tests
   * ******************************************************************** */
@@ -191,7 +199,7 @@ describe('configure', () => {
     });
   });
 
-  it('parses unexploded parameters which are arrays', () => {
+  it('parses unexploded parameters which are string arrays', () => {
     configure(app);
     const handler = app.get(setString);
     const result = handler('string[]=one');
@@ -253,7 +261,7 @@ describe('configure', () => {
     const tag: string = "<etq>";
     expect(result).toEqual(query);
     expect(debug).toHaveBeenCalled();
-    expect(trace).toHaveBeenCalledTimes(7);
+    expect(trace).toHaveBeenCalledTimes(8);
     expect(trace).toHaveBeenNthCalledWith(
       1
       tag,
@@ -293,11 +301,18 @@ describe('configure', () => {
       6
       tag,
       expect.stringContaining('TRACE'),
+      'isArray',
+      JSON.stringify(['one', 'two'], null, 2)
+    );
+    expect(trace).toHaveBeenNthCalledWith(
+      7
+      tag,
+      expect.stringContaining('TRACE'),
       'key',
       'string'
     );
     expect(trace).toHaveBeenNthCalledWith(
-      7
+      8
       tag,
       expect.stringContaining('TRACE'),
       'query',
@@ -315,6 +330,26 @@ describe('configure', () => {
     });
   });
 
+  it('parses unexploded parameters which are number arrays', () => {
+    configure(app);
+    const handler = app.get(setString);
+    const qs = 'number[]=1';
+
+    const result = handler(qs);
+
+    expect(result).toEqual({ number: [1] });
+  });
+
+  it('parses unexploded parameters which are an array with more than one number', () => {
+    configure(app);
+    const handler = app.get(setString);
+    const qs = 'number[]=1&number[]=2';
+
+    const result = handler(qs);
+
+    expect(result).toEqual({ number: [1, 2] });
+  });
+
   it('parses multiple floats', () => {
     configure(app);
     const handler = app.get(setString);
@@ -325,6 +360,26 @@ describe('configure', () => {
     });
   });
 
+  it('parses unexploded parameters are which an array with one float', () => {
+    configure(app);
+    const handler = app.get(setString);
+    const qs = 'float[]=1.11';
+
+    const result = handler(qs);
+
+    expect(result).toEqual({ float: [1.11] });
+  });
+
+  it('parses unexploded parameters are which an array with more than one float', () => {
+    configure(app);
+    const handler = app.get(setString);
+    const qs = 'float[]=1.11&float[]=2.22';
+
+    const result = handler(qs);
+
+    expect(result).toEqual({ float: [1.11, 2.22] });
+  });
+
   it('parses multiple booleans', () => {
     configure(app);
     const handler = app.get(setString);
@@ -333,5 +388,25 @@ describe('configure', () => {
     expect(result).toEqual({
       boolean: [true, false]
     });
+  });
+
+  it('parses unexploded parameters are which an array with one boolean', () => {
+    configure(app);
+    const handler = app.get(setString);
+    const qs = 'boolean[]=true';
+
+    const result = handler(qs);
+
+    expect(result).toEqual({ boolean: [true] });
+  });
+
+  it('parses unexploded parameters are which an array with more than one float', () => {
+    configure(app);
+    const handler = app.get(setString);
+    const qs = 'boolean[]=true&boolean[]=false';
+
+    const result = handler(qs);
+
+    expect(result).toEqual({ boolean: [true, false] });
   });
 });

@@ -45,22 +45,29 @@ export function Parser(logger: Logger, deepObject: DeepObject, dates: Dates) {
     } catch (error: any) {
       logger.error('An error occurred parsing JSON query', error.message, error.stack);
 
-      if (dates && check.isDate(value)) {
-        logger.trace('parsing dates', value);
-        return new Date(value);
-      }
-
       logger.trace('isString', value);
       return value;
     }
   }
 
   function parse(value: any) {
-    const number = Number.parseFloat(value);
+    const isNumber = check.isNumber(value);
 
-    if (!isNaN(number) && isFinite(value)) {
+    if (isNumber) {
       logger.trace('isNumber', value);
-      return number;
+      // Interestingly if an array of numbers is provided it will be parsed to the first entry.
+      // So for single entry arrays we can use the return.
+      const parsed = Number.parseFloat(value);
+      const isArray = check.isArray(value);
+      logger.trace('isArray', isArray);
+
+      return isArray ? [parsed] : parsed;
+    }
+
+    if (dates && check.isDate(value)) {
+      logger.trace('parsing dates', value);
+
+      return new Date(value);
     }
 
     if (check.isBoolean(value)) {
