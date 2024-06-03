@@ -1,16 +1,17 @@
-import console from 'console';
+import { error, warn, info, debug, trace } from 'console';
 
-import { LevelMap } from './types';
+import { LevelMap, LevelStringMap, Logging, LogFunction } from './types';
 import check from './check';
 
-export function Logger(
-  level: (string | undefined) = 'error',
-  logString: ((logLevel: string) => string | undefined) = (logLevel: string) => `${new Date().toISOString()} [${logLevel.toUpperCase()}] -`
-) {
+export function Logger(options: Logging) {
+  const {
+    level = 'error',
+    logString = (logLevel: string) => `${new Date().toISOString()} [${logLevel.toUpperCase()}] -`,
+    tag
+  } = options;
   const levelIdx = LevelMap[level];
-  const { error, warn, info, debug, trace } = console;
 
-  function parseObjects(args: any[]) {
+  function parseLogSafeObjects(args: any[]) {
     return args.map((arg) => {
       return (check.isArray(arg) || check.isJsonObject(arg))
         ? JSON.stringify(arg, null, 2)
@@ -18,11 +19,44 @@ export function Logger(
     });
   }
 
+  function log(method: (...args: any) => void, levelIdx: number, thresholdIdx: number = 0, args: any[]) {
+    if (levelIdx < thresholdIdx) {
+      return null;
+    }
+
+    const finalArgs = [];
+    const logLevel = LevelStringMap[levelIdx];
+
+    if (tag) {
+      finalArgs.push('<etq>');
+    }
+
+    if (check.isString(logString)) {
+      finalArgs.push(logString);
+    }
+
+    if (args?.length) {
+      const parsedArgs = parseLogSafeObjects(args);
+
+      if (check.isFunction(logString)) {
+        const logFn = logString as LogFunction;
+
+        finalArgs.push(logFn(logLevel));
+      }
+
+      for (const arg of parsedArgs) {
+        finalArgs.push(arg);
+      }
+    }
+
+    method(...finalArgs);
+  }
+
   return {
-    error: (...args: any[]) => error(logString, ...parseObjects(args)),
-    warn: (...args: any[]) => levelIdx >= 1 ? warn(logString('warn'), ...parseObjects(args)) : null,
-    info: (...args: any[]) => levelIdx >= 2 ? info(logString('info'), ...parseObjects(args)) : null,
-    debug: (...args: any[]) => levelIdx >= 3 ? debug(logString('debug'), ...parseObjects(args)) : null,
-    trace: (...args: any[]) => levelIdx >= 4 ? trace(logString('trace'), ...parseObjects(args)) : null
+    error: (...args: any[]) => log(error, levelIdx, 0, args),
+    warn: (...args: any[]) => log(warn, levelIdx, 1, args),
+    info: (...args: any[]) => log(info, levelIdx, 2, args),
+    debug: (...args: any[]) => log(debug, levelIdx, 3, args),
+    trace: (...args: any[]) => log(trace, levelIdx, 4, args)
   };
 }

@@ -8,7 +8,6 @@ import console from 'console';
 
 import { configure } from "../src/configure";
 
-
 /** ********************************************************************
   *                            Types
   * ******************************************************************** */
@@ -19,7 +18,11 @@ import { setString } from "../src/types";
   *                            Mocks
   * ******************************************************************** */
 
+const error = jest.spyOn(console, 'error');
+const warn = jest.spyOn(console, 'warn');
+const info = jest.spyOn(console, 'info');
 const debug = jest.spyOn(console, 'debug');
+const trace = jest.spyOn(console, 'trace');
 
 /** ********************************************************************
   *                            Setup
@@ -32,10 +35,6 @@ beforeAll(() => {
   jest.spyOn(app, 'get');
 });
 
-beforeEach(() => {
-  debug.mockClear();
-});
-
 /** ********************************************************************
   *                            Tests
   * ******************************************************************** */
@@ -44,6 +43,33 @@ describe('configure', () => {
   it('sets a query parser', () => {
     expect(configure(app)).toBeUndefined();
     expect(app.set).toHaveBeenCalledWith(setString, expect.any(Function));
+  });
+
+  it('returns an empty object when the qs is an empty string', () => {
+    configure(app);
+    const handler = app.get(setString);
+
+    const result = handler('');
+
+    expect(result).toEqual({});
+  });
+
+  it('returns an empty object when the qs is an untrimmed whitespace', () => {
+    configure(app);
+    const handler = app.get(setString);
+
+    const result = handler(' ');
+
+    expect(result).toEqual({});
+  });
+
+  it('returns an empty object when the qs is null', () => {
+    configure(app);
+    const handler = app.get(setString);
+
+    const result = handler(null);
+
+    expect(result).toEqual({});
   });
 
   it('it parses every type with a simple query string', () => {
@@ -131,10 +157,7 @@ describe('configure', () => {
     const handler = app.get(setString);
 
     const result = handler(`date=${isoDate}`);
-    jest.spyOn(console, 'debug');
-
     expect(result).toEqual({ date });
-    expect(debug).not.toHaveBeenCalled();
   });
 
   it('it parses every type with a dates', () => {
@@ -168,11 +191,20 @@ describe('configure', () => {
     });
   });
 
+  it('parses unexploded parameters which are arrays', () => {
+    configure(app);
+    const handler = app.get(setString);
+    const result = handler('string[]=one');
+
+    expect(result).toEqual({
+      string: ['one']
+    });
+  });
+
   it('parses multiple exploded strings', () => {
     configure(app);
     const handler = app.get(setString);
     const result = handler('string=one&string=two');
-    jest.spyOn(console, 'debug');
 
     expect(result).toEqual({
       string: ['one', 'two']
@@ -184,7 +216,6 @@ describe('configure', () => {
     configure(app);
     const handler = app.get(setString);
     const result = handler('string[]=one');
-    jest.spyOn(console, 'debug');
 
     expect(result).toEqual({
       string: ['one']
@@ -193,16 +224,84 @@ describe('configure', () => {
   });
 
   it('parses multiple strings with debug level logging', () => {
-    configure(app, { logging: { level: 'debug' }});
+    configure(app, { logging: { level: 'debug' } });
     const handler = app.get(setString);
     const result = handler('string=one&string=two');
 
     expect(result).toEqual({ string: ['one', 'two'] });
     expect(debug).toHaveBeenCalledWith(
+      '<etq>',
       expect.stringContaining('DEBUG'),
       'Duplicate key reusing existing entry',
       'string',
       JSON.stringify(['one', 'two'], null, 2)
+    );
+    expect(error).not.toHaveBeenCalled();
+    expect(warn).not.toHaveBeenCalled();
+    expect(info).not.toHaveBeenCalled();
+    expect(trace).not.toHaveBeenCalled();
+  });
+
+  it('parses multiple strings with trace level logging', () => {
+    const options = { logging: { level: 'trace' } };
+    const query = { string: ['one', 'two'] };
+    configure(app, options);
+
+    const handler = app.get(setString);
+    const qs = 'string=one&string=two';
+    const result = handler(qs);
+    const tag: string = "<etq>";
+    expect(result).toEqual(query);
+    expect(debug).toHaveBeenCalled();
+    expect(trace).toHaveBeenCalledTimes(7);
+    expect(trace).toHaveBeenNthCalledWith(
+      1
+      tag,
+      expect.stringContaining('TRACE'),
+      'options',
+      JSON.stringify(options, null, 2)
+    );
+    expect(trace).toHaveBeenNthCalledWith(
+      2
+      tag,
+      expect.stringContaining('TRACE'),
+      'qs',
+      qs
+    );
+    expect(trace).toHaveBeenNthCalledWith(
+      3
+      tag,
+      expect.stringContaining('TRACE'),
+      'key',
+      'string'
+    );
+    expect(trace).toHaveBeenNthCalledWith(
+      4
+      tag,
+      expect.stringContaining('TRACE'),
+      'entries',
+      JSON.stringify(['one', 'two'], null, 2)
+    );
+    expect(trace).toHaveBeenNthCalledWith(
+      5
+      tag,
+      expect.stringContaining('TRACE'),
+      'isArray',
+      JSON.stringify(['one', 'two'], null, 2)
+    );
+    expect(trace).toHaveBeenNthCalledWith(
+      6
+      tag,
+      expect.stringContaining('TRACE'),
+      'key',
+      'string'
+    );
+    expect(trace).toHaveBeenNthCalledWith(
+      7
+      tag,
+      expect.stringContaining('TRACE'),
+      'query',
+      JSON.stringify(query, null, 2)
     );
   });
 

@@ -16,13 +16,26 @@ export const LevelMap: Record<string, Levels> = {
   trace: Levels.trace
 };
 
+export const LevelStringMap: Record<number, string> = {
+  [Levels.error]: 'error',
+  [Levels.warn]: 'warn',
+  [Levels.info]: 'info',
+  [Levels.debug]: 'debug',
+  [Levels.trace]: 'trace'
+};
+
 export type DeepObject = boolean;
 export type Logger = any;
 export type Dates = boolean;
+export type Tag = boolean;
+export type LogFunction = (level: string) => string;
+export type LogString = string | LogFunction;
 
 export interface Logging {
-  logger?: Logger,
-  level?: string
+  logger?: Logger;
+  level?: string;
+  tag?: boolean;
+  logString?: LogString;
 }
 
 export interface Options {

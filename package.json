@@ -1,6 +1,6 @@
 {
   "name": "express-typed-query",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "A url query string parser that converts query parameters to the correct Javascript data type",
   "main": "dist/src/index.js",
   "files": [
@@ -10,7 +10,7 @@
     "test": "jest",
     "build": "tsc"
   },
-  "keywords": ["query-string", "qs", "express", "typescript"],
+  "keywords": ["query-string", "qs", "express", "typescript", "types"],
   "author": "wattry",
   "license": "ISC",
   "devDependencies": {
