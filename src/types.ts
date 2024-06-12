@@ -24,12 +24,12 @@ export const LevelStringMap: Record<number, string> = {
   [Levels.trace]: 'trace'
 };
 
-export type DeepObject = boolean;
 export type Logger = any;
 export type Dates = boolean;
 export type Tag = boolean;
 export type LogFunction = (level: string) => string;
 export type LogString = string | LogFunction;
+export type HailMarry = boolean;
 
 export interface Logging {
   logger?: Logger;
@@ -39,7 +39,7 @@ export interface Logging {
 }
 
 export interface Options {
-  deepObject?: DeepObject;
   logging?: Logging;
   dates?: Dates;
+  hailMary?: HailMarry;
 }

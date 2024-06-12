@@ -1,56 +1,52 @@
-import check from './check';
-import { Logger, DeepObject, Dates } from './types';
+import check, { qsArrayRegex, qsDeepObjectRegex} from './check';
+import { Logger, Dates, HailMarry } from './types';
 
-export function Parser(logger: Logger, deepObject: DeepObject, dates: Dates) {
-  function parseArray(value: any[]): any[] {
-    return value.map((val: any) => parse(val));
-  }
+export default function Parser(logger: Logger, dates: Dates, hailMary: HailMarry) {
+  function parseQsArray(qsKey: string, entries: string[], deepObject: any) {
+    const isDeepObject = qsKey.match(qsDeepObjectRegex);
 
-  function parseObject(value: any) {
-    const keys: any[] = Object.keys(value);
-    const object: { [k: string ]: any } = {};
+    if (isDeepObject) {
+      const normalizedKey = qsKey.replace(qsDeepObjectRegex, '');
 
-    for (const key of keys) {
-      const val = value[key];
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const [_, keys] = isDeepObject;
 
-      object[key] = parse(val);
+      for (const key of keys) {
+        if (deepObject[key]) {
+          continue;
+        }
+
+        deepObject[key] = parse(entries);
+      }
+
+      return { key: normalizedKey, values: deepObject, isDeepObject: true };
     }
 
-    return object;
+    const normalizedKey = qsKey.replace(qsArrayRegex, '');
+
+    return { key: normalizedKey, values: parse(entries) };
   }
 
-  function parseObjectOrStringOrDate(value: any) {
-    // Check if it contains an opening and closing array or object
-    // brackets and try parse it to a javascript object.
-    // If it is not parsable it will throw an error.
-    try {
-      if (check.isJsonString(value)) {
-        logger.trace('isJsonString', value);
-        const js = JSON.parse(value);
+  function parseQs(key: string, values: any, query: any, deepObject: any) {
+    // There are be multiple entries for the same key.
+    if (values.length > 1 || check.isQsStructure(key)) {
+      const qsEntry = parseQsArray(key, values, deepObject);
+      logger.trace('arrayKey', qsEntry);
+      if (qsEntry.isDeepObject) {
+        logger.trace('isDeepObject');
 
-        return deepObject ? parseObject(js) : js;
-      } else if (check.isJsonObject(value)) {
-        logger.trace('isJsonObject', value);
-
-        return deepObject ? parseObject(value) : JSON.parse(JSON.stringify(value))
+        query[qsEntry.key] = query[qsEntry.key] ? { ...query[qsEntry.key], ...qsEntry.values } : qsEntry.values;
+      } else {
+        logger.trace('shallow qs');
+        query[qsEntry.key] = qsEntry.values;
       }
-
-      if (dates && check.isDate(value)) {
-        logger.trace('parsing dates', value);
-
-        return new Date(value);
-      }
-
-      return value;
-    } catch (error: any) {
-      logger.error('An error occurred parsing JSON query', error.message, error.stack);
-
-      logger.trace('isString', value);
-      return value;
+    } else {
+      const result = parse(values[0]);
+      query[key] = result;
     }
   }
 
-  function parse(value: any) {
+  function parse(value: any): any {
     const isNumber = check.isNumber(value);
 
     if (isNumber) {
@@ -93,8 +89,55 @@ export function Parser(logger: Logger, deepObject: DeepObject, dates: Dates) {
       return parseArray(value);
     }
 
-    return parseObjectOrStringOrDate(value);
+    return parseObjectOrString(value);
   }
 
-  return parse;
+  function parseArray(value: any[]): any[] {
+    return value.map((val: any) => parse(val));
+  }
+
+  function parseObject(value: any) {
+    return JSON.parse(value, (_, value) => parse(value));
+  }
+
+  function parseObjectOrString(value: any) {
+    // Check if it contains an opening and closing array or object
+    // brackets and try parse it to a javascript object.
+    // If it is not parsable it will throw an error.
+    const isJson = check.isJson(value);
+    const isObject = check.isObject(value);
+    try {
+      if (isJson || isObject) {
+        logger.trace('isJson', value);
+
+        return parseObject(value);
+      }
+
+      // Is a string or a JS object
+      return value;
+    } catch (error: any) {
+      // If it appears to be a JSON string but is not properly formed we'll need to throw an error.
+      if (hailMary && isJson) {
+        logger.warn('Performing risky Hail Mary');
+        try {
+          // Remove all quotes and wrap all keys and values in double quotes.
+          const lastAttempt = value
+            .replace(/"|'/g, '')
+            .replace(/((\d+(\.\d+)?)|\w+)/g, '"$1"');
+
+          return parseObject(lastAttempt);
+        } catch (err: any) {
+          logger.error('Malformed JSON query', err.message, err.stack);
+
+          throw new Error(`Invalid JSON in query: ${err.message}`);
+        }
+      } else {
+        logger.trace('isObject', value);
+
+        return value;
+      }
+    }
+  }
+
+  return { parseQs };
 }

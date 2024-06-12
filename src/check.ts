@@ -1,9 +1,21 @@
-const objectRegex = /{[\s\S]*}/gm;
-const arrayRegex = /\[[\s\S]*\]/gm;
+export const objectRegex = /{[\s\S]*}/gm;
+export const arrayRegex = /\[[\s\S]*\]/gm;
+export const qsArrayRegex: RegExp = /\[\]$/gm;
+export const qsDeepObjectRegex: RegExp = /\[([a-zA-Z])\]$/;
 
-// This works a little different because we're going to use the value that is returned
-// to avoid making the same call several times.
-export function isNumber(value: any) {
+function isQsArray(key: string) {
+  return qsArrayRegex.test(key);
+}
+
+function isQsDeepObject(key: string) {
+  return qsDeepObjectRegex.test(key);
+}
+
+function isQsStructure(key: string) {
+  return isQsArray(key) || isQsDeepObject(key);
+}
+
+function isNumber(value: any) {
   const number = Number.parseFloat(value);
 
   if (!Number.isNaN(number) && isFinite(value)) {
@@ -13,11 +25,11 @@ export function isNumber(value: any) {
   return false;
 }
 
-export function isString(value: any): boolean {
+function isString(value: any): boolean {
   return typeof value === 'string';
 }
 
-export function isBoolean(value: any): boolean {
+function isBoolean(value: any): boolean {
   if (isString(value)) {
     return (value.toLowerCase() === 'true' || value.toLowerCase() === 'false')
   } else {
@@ -25,29 +37,48 @@ export function isBoolean(value: any): boolean {
   }
 }
 
-export function isDate(value: any): boolean {
+function isDate(value: any): boolean {
   try {
     new Date(value).toISOString();
+
     return true
   } catch (error: any) {
     return false;
   }
 }
 
-export function isArray(value: any): boolean {
-  return value instanceof Array || Object.prototype.toString.call(value) === '[object Array]' || Array.isArray(value);
-}
-
-export function isFunction(value: any): boolean {
+function isFunction(value: any): boolean {
   return typeof value === 'function';
 }
 
-export function isJsonString(value: any): boolean {
-  return isString(value) && (objectRegex.test(value) || arrayRegex.test(value));
+function isArray(value: any): boolean {
+  return value instanceof Array || Object.prototype.toString.call(value) === '[object Array]' || Array.isArray(value);
 }
 
-export function isJsonObject(value: any): boolean {
+function isJson(value: any): boolean {
+  if (isString(value)) {
+    const trimmed = value.trim();
+
+    return objectRegex.test(trimmed) || arrayRegex.test(trimmed);
+  }
+
+  return false;
+}
+
+function isObject(value: any): boolean {
   return !(value === null) && value instanceof Object && Object.prototype.toString.call(value) === '[object Object]';
 }
 
-export default { isNumber, isString, isBoolean, isDate, isArray, isFunction,isJsonObject, isJsonString };
+export default {
+  isQsArray,
+  isQsDeepObject,
+  isQsStructure,
+  isNumber,
+  isString,
+  isBoolean,
+  isDate,
+  isFunction,
+  isArray,
+  isObject,
+  isJson
+};

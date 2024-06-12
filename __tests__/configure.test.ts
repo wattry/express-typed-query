@@ -13,6 +13,7 @@ import { configure } from "../src/configure";
   * ******************************************************************** */
 
 import { setString } from "../src/types";
+import check from '../src/check';
 
 /** ********************************************************************
   *                            Mocks
@@ -29,6 +30,15 @@ const trace = jest.spyOn(console, 'trace');
   * ******************************************************************** */
 
 const app = express();
+const BASE = { string: "string", boolean: true, number: 1, float: 1.11, null: null, isUndefined: undefined };
+const stringifyValues = (_: any, value: any) => {
+  if (value === undefined) {
+    return undefined;
+  }
+  return !check.isString(value) && !check.isObject(value) ? `${value}` : value
+};
+const parseQs = (array: any[]) => array.map((entry) => entry[1] ? entry.join('=') : `${entry[0]}=${entry[1]}`).join('&');
+const parser = (qs: any) => app.get(setString)(qs);
 
 beforeAll(() => {
   jest.spyOn(app, 'set');
@@ -48,358 +58,247 @@ beforeEach(() => {
   * ******************************************************************** */
 
 describe('configure', () => {
-  it('sets a query parser', () => {
-    expect(configure(app)).toBeUndefined();
-    expect(app.set).toHaveBeenCalledWith(setString, expect.any(Function));
-  });
+  describe('error', () => {
+    it('it throws when the JSON is unparsable with the hailMary option', () => {
+      configure(app, { hailMary: true });
 
-  it('returns an empty object when the qs is an empty string', () => {
-    configure(app);
-    const handler = app.get(setString);
+      const qs = 'filter={string: "string", boolean: "true", number: "1", float: "1.11", null: "null", array: { "string", true", "1", "1.11", "null"} }';
 
-    const result = handler('');
-
-    expect(result).toEqual({});
-  });
-
-  it('returns an empty object when the qs is an untrimmed whitespace', () => {
-    configure(app);
-    const handler = app.get(setString);
-
-    const result = handler(' ');
-
-    expect(result).toEqual({});
-  });
-
-  it('returns an empty object when the qs is null', () => {
-    configure(app);
-    const handler = app.get(setString);
-
-    const result = handler(null);
-
-    expect(result).toEqual({});
-  });
-
-  it('it parses every type with a simple query string', () => {
-    configure(app);
-    const handler = app.get(setString);
-    const date = new Date();
-    const isoDate = date.toISOString();
-
-    expect(handler(
-      `string=string&true=true&false=false&number=1&float=1.11&null=null&undefined=undefined&date=${isoDate}`
-    )).toEqual({
-      date: isoDate,
-      true: true,
-      false: false,
-      string: 'string',
-      number: 1,
-      float: 1.11,
-      null: null,
-      undefined: undefined
+      expect(() => parser(qs))
+        .toThrowError('Invalid JSON in query');
     });
-    expect(app.get).toHaveBeenCalledWith(setString);
-  });
 
-  it('parses a an object', () => {
-    configure(app);
-    const handler = app.get(setString);
-    const result = handler(
-      'filter={"string": "string", "boolean": true, "number": 1, "float": 1.11, "null": null, "array": ["string", true, 1, 1.11, null] }'
-    );
+    it('it replaces all quotes and tries to parse the entries with the hailMary option', () => {
+      configure(app, { hailMary: true });
 
-    expect(result).toEqual({
-      filter: {
-        string: 'string',
-        boolean: true,
-        number: 1,
-        float: 1.11,
-        null: null,
-        array: ['string', true, 1, 1.11, null]
-      }
+      const qs = 'filter={string: "string", \'boolean\': true", number: \'1", float: "1.11", null: "null", array: ["string", true", "1", "1.11", "null"] }';
+      const expected = { filter: { ...JSON.parse(JSON.stringify(BASE)), array: Array.from(Object.values(BASE)) } };
+
+      expect(parser(qs)).toEqual(expected);
+    });
+
+    it('it tries to parse the string to json as a last ditch attempt', () => {
+      configure(app, { hailMary: true });
+
+      const qs = 'filter={string: string, boolean: true, number: 1, float: 1.11, null: null, array: [string, true, 1, 1.11, null, undefined] }';
+      const expected = { filter: { ...JSON.parse(JSON.stringify(BASE)), array: Array.from(Object.values(BASE)) } };
+
+      expect(parser(qs)).toEqual(expected);
     });
   });
 
-  it('parses a an object without throwing using deepObject setting', () => {
-    configure(app, { deepObject: true });
-    const handler = app.get(setString);
-    const result = handler(
-      'filter={"string": "string", "boolean": true, "number": 1, "float": 1.11, "null": null, "array": ["string", true, 1, 1.11, null] }'
-    );
-
-    expect(result).toEqual({
-      filter: {
-        string: 'string',
-        boolean: true,
-        number: 1,
-        float: 1.11,
-        null: null,
-        array: ['string', true, 1, 1.11, null]
-      }
+  describe('success', () => {
+    it('sets a query parser', () => {
+      expect(configure(app)).toBeUndefined();
+      expect(app.set).toHaveBeenCalledWith(setString, expect.any(Function));
     });
-  });
 
-  it('parses a deep object', () => {
-    configure(app, { deepObject: true });
-    const handler = app.get(setString);
-    const result = handler(
-      'filter={"string": "string", "boolean": "true", "number": "1", "float": "1.11", "null": "null", "array": ["string", "true", "1", "1.11", "null"] }'
-    );
+    it('returns an empty object when the qs is an empty string', () => {
+      configure(app);
 
-    expect(result).toEqual({
-      filter: {
-        string: 'string',
-        boolean: true,
-        number: 1,
-        float: 1.11,
-        null: null,
-        array: ['string', true, 1, 1.11, null]
-      }
+      expect(parser('')).toEqual({});
     });
-  });
 
-  it('parses dates', () => {
-    configure(app, { dates: true });
-    const date = new Date();
-    const isoDate = date.toISOString();
-    const handler = app.get(setString);
+    it('returns an empty object when the qs is an untrimmed whitespace', () => {
+      configure(app);
 
-    const result = handler(`date=${isoDate}`);
-    expect(result).toEqual({ date });
-  });
-
-  it('it parses every type with a dates', () => {
-    configure(app, { dates: true });
-    const handler = app.get(setString);
-    const date = new Date();
-    const isoDate = date.toISOString();
-
-    expect(handler(
-      `string=string&true=true&false=false&number=1&float=1.11&null=null&undefined=undefined&date=${isoDate}`
-    )).toEqual({
-      date,
-      true: true,
-      false: false,
-      string: 'string',
-      number: 1,
-      float: 1.11,
-      null: null,
-      undefined: undefined
+      expect(parser(' ')).toEqual({});
     });
-    expect(app.get).toHaveBeenCalledWith(setString);
-  });
 
-  it('parses multiple strings unexploded', () => {
-    configure(app);
-    const handler = app.get(setString);
-    const result = handler('string[]=one&string[]=two');
+    it('returns an empty object when the qs is null', () => {
+      configure(app);
 
-    expect(result).toEqual({
-      string: ['one', 'two']
+      expect(parser(null)).toEqual({});
     });
-  });
 
-  it('parses unexploded parameters which are string arrays', () => {
-    configure(app);
-    const handler = app.get(setString);
-    const result = handler('string[]=one');
+    it('it parses every type with a simple query string', () => {
+      configure(app);
 
-    expect(result).toEqual({
-      string: ['one']
+      const date = new Date();
+      const isoDate = date.toISOString();
+
+      expect(parser(parseQs(Object.entries({ ...BASE, date: isoDate }))))
+        .toEqual({
+          date: isoDate,
+          boolean: true,
+          string: 'string',
+          number: 1,
+          float: 1.11,
+          null: null,
+          undefined: undefined
+        });
+      expect(app.get).toHaveBeenCalledWith(setString);
     });
-  });
 
-  it('parses multiple exploded strings', () => {
-    configure(app);
-    const handler = app.get(setString);
-    const result = handler('string=one&string=two');
+    it('parses an object', () => {
+      configure(app);
 
-    expect(result).toEqual({
-      string: ['one', 'two']
+      expect(parser(`filter=${JSON.stringify(BASE, stringifyValues)}`))
+        .toEqual({ filter: BASE });
     });
-    expect(debug).not.toHaveBeenCalled();
-  });
 
-  it('parses a single array unexploded string', () => {
-    configure(app);
-    const handler = app.get(setString);
-    const result = handler('string[]=one');
+    it('parses a nested JSON string', () => {
+      configure(app);
 
-    expect(result).toEqual({
-      string: ['one']
+      expect(parser(`filter=${JSON.stringify({ ...BASE, object: { ...BASE } })}`))
+        .toEqual({
+          filter: {
+            ...BASE,
+            object: { ...BASE }
+          }
+        });
     });
-    expect(debug).not.toHaveBeenCalled();
-  });
 
-  it('parses multiple strings with debug level logging', () => {
-    configure(app, { logging: { level: 'debug' } });
-    const handler = app.get(setString);
-    const result = handler('string=one&string=two');
+    it('parses dates', () => {
+      configure(app, { dates: true });
+      const date = new Date();
+      const isoDate = date.toISOString();
 
-    expect(result).toEqual({ string: ['one', 'two'] });
-    expect(debug).toHaveBeenCalledWith(
-      '<etq>',
-      expect.stringContaining('DEBUG'),
-      'Duplicate key reusing existing entry',
-      'string',
-      JSON.stringify(['one', 'two'], null, 2)
-    );
-    expect(error).not.toHaveBeenCalled();
-    expect(warn).not.toHaveBeenCalled();
-    expect(info).not.toHaveBeenCalled();
-    expect(trace).not.toHaveBeenCalled();
-  });
-
-  it('parses multiple strings with trace level logging', () => {
-    const options = { logging: { level: 'trace' } };
-    const query = { string: ['one', 'two'] };
-    configure(app, options);
-
-    const handler = app.get(setString);
-    const qs = 'string=one&string=two';
-    const result = handler(qs);
-    const tag: string = "<etq>";
-    expect(result).toEqual(query);
-    expect(debug).toHaveBeenCalled();
-    expect(trace).toHaveBeenCalledTimes(7);
-    expect(trace).toHaveBeenNthCalledWith(
-      1
-      tag,
-      expect.stringContaining('TRACE'),
-      'options',
-      JSON.stringify(options, null, 2)
-    );
-    expect(trace).toHaveBeenNthCalledWith(
-      2
-      tag,
-      expect.stringContaining('TRACE'),
-      'qs',
-      qs
-    );
-    expect(trace).toHaveBeenNthCalledWith(
-      3
-      tag,
-      expect.stringContaining('TRACE'),
-      'key',
-      'string'
-    );
-    expect(trace).toHaveBeenNthCalledWith(
-      4
-      tag,
-      expect.stringContaining('TRACE'),
-      'entries',
-      JSON.stringify(['one', 'two'], null, 2)
-    );
-    expect(trace).toHaveBeenNthCalledWith(
-      5
-      tag,
-      expect.stringContaining('TRACE'),
-      'isArray',
-      JSON.stringify(['one', 'two'], null, 2)
-    );
-    expect(trace).toHaveBeenNthCalledWith(
-      6
-      tag,
-      expect.stringContaining('TRACE'),
-      'key',
-      'string'
-    );
-    expect(trace).toHaveBeenNthCalledWith(
-      7
-      tag,
-      expect.stringContaining('TRACE'),
-      'query',
-      JSON.stringify(query, null, 2)
-    );
-  });
-
-  it('parses multiple numbers', () => {
-    configure(app);
-    const handler = app.get(setString);
-    const result = handler('number=1&number=2');
-
-    expect(result).toEqual({
-      number: [1, 2]
+      expect(parser(`date=${isoDate}`)).toEqual({ date });
     });
-  });
 
-  it('parses unexploded parameters which are number arrays', () => {
-    configure(app);
-    const handler = app.get(setString);
-    const qs = 'number[]=1';
+    it('it parses every type with a dates', () => {
+      configure(app, { dates: true });
 
-    const result = handler(qs);
+      const date = new Date();
+      const isoDate = date.toISOString();
+      const qs = parseQs(Object.entries({ ...BASE, date: isoDate }));
 
-    expect(result).toEqual({ number: [1] });
-  });
-
-  it('parses unexploded parameters which are an array with more than one number', () => {
-    configure(app);
-    const handler = app.get(setString);
-    const qs = 'number[]=1&number[]=2';
-
-    const result = handler(qs);
-
-    expect(result).toEqual({ number: [1, 2] });
-  });
-
-  it('parses multiple floats', () => {
-    configure(app);
-    const handler = app.get(setString);
-    const result = handler('float=1.11&float=2.22');
-
-    expect(result).toEqual({
-      float: [1.11, 2.22]
+      expect(parser(qs)).toEqual({ ...BASE, date: date });
     });
-  });
 
-  it('parses unexploded parameters are which an array with one float', () => {
-    configure(app);
-    const handler = app.get(setString);
-    const qs = 'float[]=1.11';
+    it('parses multiple strings unexploded', () => {
+      configure(app);
 
-    const result = handler(qs);
-
-    expect(result).toEqual({ float: [1.11] });
-  });
-
-  it('parses unexploded parameters are which an array with more than one float', () => {
-    configure(app);
-    const handler = app.get(setString);
-    const qs = 'float[]=1.11&float[]=2.22';
-
-    const result = handler(qs);
-
-    expect(result).toEqual({ float: [1.11, 2.22] });
-  });
-
-  it('parses multiple booleans', () => {
-    configure(app);
-    const handler = app.get(setString);
-    const result = handler('boolean=true&boolean=false');
-
-    expect(result).toEqual({
-      boolean: [true, false]
+      expect(parser('string[]=one&string[]=two')).toEqual({
+        string: ['one', 'two']
+      });
     });
-  });
 
-  it('parses unexploded parameters are which an array with one boolean', () => {
-    configure(app);
-    const handler = app.get(setString);
-    const qs = 'boolean[]=true';
+    it('parses unexploded parameters which are string arrays', () => {
+      configure(app);
 
-    const result = handler(qs);
+      expect(parser('string[]=one')).toEqual({
+        string: ['one']
+      });
+    });
 
-    expect(result).toEqual({ boolean: [true] });
-  });
+    it('parses unexploded deepObject parameters which are any type of array', () => {
+      configure(app);
 
-  it('parses unexploded parameters are which an array with more than one float', () => {
-    configure(app);
-    const handler = app.get(setString);
-    const qs = 'boolean[]=true&boolean[]=false';
+      expect(parser('string[a]=one&string[a]=3&string[a]=true&string[a]=1.11&string[a]=null&string[b]=two&string[b]=4&string[b]=false&string[b]=2.22&string[b]=null')).toEqual({
+        string: { a: ['one', 3, true, 1.11, null], b: ['two', 4, false, 2.22, null] }
+      });
+    });
 
-    const result = handler(qs);
+    it('parses unexploded deepObject parameters which are arrays of objects', () => {
+      configure(app);
 
-    expect(result).toEqual({ boolean: [true, false] });
+      expect(parser('object[a]={ "string": "a" }&object[a]={ "boolean": "true" }')).toEqual({
+        object: { a: [{ string: 'a' }, { boolean: true }] }
+      });
+    });
+
+    it('parses multiple exploded strings', () => {
+      configure(app);
+
+      expect(parser('string=one&string=two')).toEqual({
+        string: ['one', 'two']
+      });
+      expect(debug).not.toHaveBeenCalled();
+    });
+
+    it('parses a single array unexploded string', () => {
+      configure(app);
+
+      expect(parser('string[]=one')).toEqual({
+        string: ['one']
+      });
+      expect(debug).not.toHaveBeenCalled();
+    });
+
+    it('parses multiple strings with debug level logging', () => {
+      configure(app, { logging: { level: 'debug' } });
+
+      expect(parser('string=one&string=two')).toEqual({ string: ['one', 'two'] });
+      expect(debug).toHaveBeenCalledWith(
+        '<etq>',
+        expect.stringContaining('DEBUG'),
+        'Duplicate key reusing existing entry',
+        'string',
+        JSON.stringify(['one', 'two'], null, 2)
+      );
+      expect(error).not.toHaveBeenCalled();
+      expect(warn).not.toHaveBeenCalled();
+      expect(info).not.toHaveBeenCalled();
+      expect(trace).not.toHaveBeenCalled();
+    });
+
+    it('parses multiple strings with trace level logging', () => {
+      configure(app, { logging: { level: 'trace' } });
+
+      expect(parser('string=one&string=two')).toEqual({ string: ['one', 'two'] });
+      expect(debug).toHaveBeenCalled();
+      expect(trace).toHaveBeenCalledTimes(10);
+    });
+
+    it('parses multiple numbers', () => {
+      configure(app);
+
+      expect(parser('number=1&number=2')).toEqual({
+        number: [1, 2]
+      });
+    });
+
+    it('parses unexploded parameters which are number arrays', () => {
+      configure(app);
+
+      expect(parser('number[]=1')).toEqual({ number: [1] });
+    });
+
+    it('parses unexploded parameters which are an array with more than one number', () => {
+      configure(app);
+
+      expect(parser('number[]=1&number[]=2')).toEqual({ number: [1, 2] });
+    });
+
+    it('parses multiple floats', () => {
+      configure(app);
+
+      expect(parser('float=1.11&float=2.22')).toEqual({ float: [1.11, 2.22] });
+    });
+
+    it('parses unexploded parameters are which an array with one float', () => {
+      configure(app);
+
+      expect(parser('float[]=1.11')).toEqual({ float: [1.11] });
+    });
+
+    it('parses unexploded parameters are which an array with more than one float', () => {
+      configure(app);
+
+      expect(parser('float[]=1.11&float[]=2.22')).toEqual({ float: [1.11, 2.22] });
+      expect(error).not.toHaveBeenCalled();
+    });
+
+    it('parses multiple booleans', () => {
+      configure(app);
+
+      expect(parser('boolean=true&boolean=false')).toEqual({
+        boolean: [true, false]
+      });
+    });
+
+    it('parses unexploded parameters are which an array with one boolean', () => {
+      configure(app);
+
+      expect(parser('boolean[]=true')).toEqual({ boolean: [true] });
+    });
+
+    it('parses unexploded parameters are which an array with more than one float', () => {
+      configure(app);
+
+      expect(parser('boolean[]=true&boolean[]=false')).toEqual({ boolean: [true, false] });
+    });
   });
 });
