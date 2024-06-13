@@ -151,7 +151,6 @@ Output
 ### Array Keys keys[]=x&key[]=y
 
 This format ensures a key/value intended to be an array will be interpreted as such.
-The downside to using
 
 ```javascript
 Input
@@ -164,7 +163,7 @@ Output
 }
 ```
 
-If we use the repeated key syntax and the API is expecting an array as in the following example
+If we use the repeated key syntax and the API is expecting an array as in the following example:
 
 ```javascript
 Input
@@ -177,7 +176,7 @@ Output
 }
 ```
 
-Resulting in more processing by the route to handle the case where the data layer is expecting an array.
+It results in more processing by the route to handle the case where the data layer is expecting an array.
 
 ### Deep Objects
 
