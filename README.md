@@ -1,6 +1,6 @@
 # Express Typed Query
 
-Converts query strings to Javascript typed objects
+No dependency module that converts query strings to Javascript typed objects with optional dates. Can be used in the browser and NodeJS.
 
 ## Install
 
@@ -69,35 +69,15 @@ eqs.configure(app, options);
 ## Options
 
 ### Logger
-This package uses JavaScript console logging by default. You can provide a log level to adjust what
-is logged using the log level option. The default level is "error" if no option is provided.
+This package uses JavaScript console logging by default. You can provide a log level to adjust what is logged using the log level option. The default level is "error" if no option is provided.
 
 ```javascript
 const options = { logging: { level: 'debug' } };
 ```
 
-If you'd like to provide your own logger you can use the following.
-It must have the following levels or aliases in order of precedence:
+If you'd like to provide your own logger you can use the following. It must have the following levels or aliases in order of precedence:
 
-```
-error 0
-warn  1
-info  2
-debug 3
-trace 4
-```
-
-The following is the default logging string you can override this by providing
-a different function. The log level of the message will be passed to the callback.
-
-```javascript
-const options = { logging: { logString: (level) => `${new Date().toISOString()} [${level.toUpperCase()}] -` } };
-```
-
-If you'd like to provide your own logger you can use the following.
-It must have the following levels or aliases in order of precedence:
-
-```
+```txt
 error 0
 warn  1
 info  2
@@ -117,47 +97,96 @@ If you'd like dates to be parsed from strings you can use the following option
 const options = { dates: true };
 ```
 
-This option will try parse string that are parsable into date objects.
+This option will try parse date strings that are parsable into date objects.
+
+### Hail Mary
+
+Sometimes complex JSON queries may have mistakes or incorrect quotes. Using the hailMary flag will try replace all quotes
+in a string that appears to contain JSON and attempt to parse it. This operation is risky as it makes assumptions regarding the
+string. If it fails an error will be thrown indicating it was unable to be parsed.
+
+If the hailMary flag is not set the original string will be parsed back and error handling will be required by the caller.
+
+```javascript
+const options = { hailMary: true };
+
+Input
+const qs = 'filter={string: "string", boolean: true, number: 1, float: 1.11, null: null, array: ["string", true, 1, 1.11, null] }';
+
+Output
+const output = { filter: {
+  string: 'string',
+  boolean: true,
+  number: 1,
+  float: 1.11,
+  null: null,
+  array: [
+    'string',
+    true,
+    1,
+    1.11
+  ]
+}}
+```
+
+## Parameter Parsing
+
+Utilizing terms from the [Open API 3.1.0 spec](https://swagger.io/specification/#parameter-object), this module will parse form and deepObjects using the explode settings to convert each to their respective representation.
+
+### Repeated Keys keys=x&keys=y
+
+Primitive types with repeated keys will be parsed to their associated type for instance
+
+```javascript
+Input
+'?id=1&id=2&name=John&name=Doe'
+
+Output
+{
+  id: [1, 2],
+  name: ["John", "Doe"]
+}
+```
+
+### Array Keys keys[]=x&key[]=y
+
+This format ensures a key/value intended to be an array will be interpreted as such.
+The downside to using
+
+```javascript
+Input
+'?id[]=1&name[]=John'
+
+Output
+{
+  id: [1],
+  name: ["John"]
+}
+```
+
+If we use the repeated key syntax and the API is expecting an array as in the following example
+
+```javascript
+Input
+'?id=1&name=John'
+
+Output
+{
+  id: 1,
+  name: "John"
+}
+```
+
+Resulting in more processing by the route to handle the case where the data layer is expecting an array.
 
 ### Deep Objects
 
-By default this package will use JSON.parse to convert stringified objects to get types
-if you need a deep conversion use this option to parse the string to a typed object.
+Leveraging Open API terminology again, we can nest arrays of objects as follows
 
 ```javascript
-const options = { deepObject: true };
+Input
+'?user[a]={ "id": 1, name: "John" }'
 
-const query = 'filter={"string": "string", "boolean": "true", "number": "1", "float": "1.11", "null": "null", "array": ["string", "true", "1", "1.11", "null"] }'
-```
-
-#### Deep Object False
-```javascript
-const { query } = request;
-
-{ filter:
-    {
-      string: 'string',
-      boolean: 'true',
-      number: '1',
-      float: '1.11',
-      null: 'null',
-      array: [ 'string', 'true', '1', '1.11', 'null' ]
-    }
-  }
-```
-
-#### Deep Object True
-```javascript
-const { query } = request;
-
-{ filter:
-  {
-    string: 'string',
-    boolean: true,
-    number: 1,
-    float: 1.11,
-    null: null,
-    array: [ 'string', true, 1, 1.11, null ]
-  }
-}
+Output
+{ user: { a: { id: 1, name: 'John' } }}
 ```

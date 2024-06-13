@@ -2,7 +2,7 @@ import { Application } from 'express';
 import { ParsedUrlQuery } from 'querystring';
 
 import { Logger } from './logger';
-import Parser from './parser';
+import { Parser } from './parser';
 import { Options, setString } from './types';
 
 export function configure(app: Application, options?: Options) {
@@ -19,34 +19,30 @@ export function configure(app: Application, options?: Options) {
   const logger = userLogger || Logger({ level, tag });
   const parser = Parser(logger, dates, hailMary);
 
-  logger.trace('options', options);
+  logger.debug('options', options);
 
   app.set(setString, (qs: string) => {
-    logger.trace('qs', qs);
+    logger.debug('qs', qs);
     const query: ParsedUrlQuery = {};
-    const deepObject = {};
+    // If the query string is '' or ' ' we make
     const queryString = qs?.trim();
 
     if (queryString) {
-      const entries = new URLSearchParams(queryString);
+      const params = new URLSearchParams(queryString);
+      // Get deduplicate the keys
+      const keys = new Set(params.keys());
 
-      for (const [key] of entries) {
-        logger.trace('key', key);
-        const value = query[key];
+      for (const key of keys) {
+        logger.debug('key', key);
+        // Get all the values for a possible key, reducing iteration.
+        const values = params.getAll(key);
+        logger.debug('value: ', values);
 
-        if (value) {
-          logger.debug('Duplicate key reusing existing entry', key, value);
-        } else {
-          const values = entries.getAll(key);
-          logger.trace('key:', key);
-          logger.trace('value: ', values);
-
-          parser.parseQs(key, values, query, deepObject);
-        }
+        parser.parseQs(key, values, query);
       }
     }
 
-    logger.trace('query', query);
+    logger.debug('query', query);
     return query;
   });
 }

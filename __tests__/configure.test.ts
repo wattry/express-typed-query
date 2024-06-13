@@ -65,7 +65,7 @@ describe('configure', () => {
       const qs = 'filter={string: "string", boolean: "true", number: "1", float: "1.11", null: "null", array: { "string", true", "1", "1.11", "null"} }';
 
       expect(() => parser(qs))
-        .toThrowError('Invalid JSON in query');
+        .toThrowError('Malformed JSON query: Expected "string"\x1b[4m:\x1b[0m Received "string"\x1b[4m \x1b at position 107');
     });
 
     it('it replaces all quotes and tries to parse the entries with the hailMary option', () => {
@@ -191,6 +191,38 @@ describe('configure', () => {
       });
     });
 
+    it('parses unexploded parameters with multiple nested objects', () => {
+      configure(app);
+
+      expect(parser('string[a]=1&string[b]=2&string[c]=3')).toEqual({
+        string: { a: [1], b: [2], c: [3] }
+      });
+    });
+
+    it('parses unexploded deepObject parameters of objects', () => {
+      configure(app);
+
+      expect(parser('string[a]={ "id": 1, "name": "name" }')).toEqual({
+        string: { a: [{ id: 1, name: 'name' }] }
+      });
+    });
+
+    it('parses unexploded deepObject parameters of objects with a hailMary double quotes', () => {
+      configure(app, { hailMary: true });
+
+      expect(parser('string[a]={ id: 1, name: "name" }')).toEqual({
+        string: { a: [{ id: 1, name: 'name' }] }
+      });
+    });
+
+    it('parses unexploded deepObject parameters of objects with a hailMary single quotes', () => {
+      configure(app, { hailMary: true });
+
+      expect(parser("string[a]={ id: 1, name: 'name' }")).toEqual({
+        string: { a: [{ id: 1, name: 'name' }] }
+      });
+    });
+
     it('parses unexploded deepObject parameters which are arrays of objects', () => {
       configure(app);
 
@@ -221,13 +253,6 @@ describe('configure', () => {
       configure(app, { logging: { level: 'debug' } });
 
       expect(parser('string=one&string=two')).toEqual({ string: ['one', 'two'] });
-      expect(debug).toHaveBeenCalledWith(
-        '<etq>',
-        expect.stringContaining('DEBUG'),
-        'Duplicate key reusing existing entry',
-        'string',
-        JSON.stringify(['one', 'two'], null, 2)
-      );
       expect(error).not.toHaveBeenCalled();
       expect(warn).not.toHaveBeenCalled();
       expect(info).not.toHaveBeenCalled();
@@ -238,8 +263,7 @@ describe('configure', () => {
       configure(app, { logging: { level: 'trace' } });
 
       expect(parser('string=one&string=two')).toEqual({ string: ['one', 'two'] });
-      expect(debug).toHaveBeenCalled();
-      expect(trace).toHaveBeenCalledTimes(10);
+      expect(debug).toHaveBeenCalledTimes(7);
     });
 
     it('parses multiple numbers', () => {
@@ -299,6 +323,45 @@ describe('configure', () => {
       configure(app);
 
       expect(parser('boolean[]=true&boolean[]=false')).toEqual({ boolean: [true, false] });
+    });
+
+    it('parses unexploded deepObject parameters which are arrays of dates with a number', () => {
+      configure(app, { dates: true });
+
+      const now = Date.now();
+      const isoNow = new Date(now).toISOString();
+      const isoLater = new Date(now + 10000).toISOString();
+
+      expect(parser(`date[]=${isoNow}&date[]=${isoLater}&number=1`)).toEqual({
+        date: [new Date(now), new Date(isoLater)],
+        number: 1
+      });
+    });
+
+    it('parses unexploded deepObject parameters which are arrays of dates with a number', () => {
+      configure(app, { dates: true });
+
+      const now = Date.now();
+      const isoNow = new Date(now).toISOString();
+      const isoLater = new Date(now + 10000).toISOString();
+
+      expect(parser(`date[a]=${isoNow}&date[a]=${isoLater}&number=1`)).toEqual({
+        date: { a: [new Date(isoNow), new Date(isoLater)] },
+        number: 1
+      });
+    });
+
+    it('parses unexploded deepObject parameters which are arrays of dates with numbers', () => {
+      configure(app, { dates: true });
+      const now = Date.now();
+      const isoNow = new Date(now).toISOString();
+      const isoLater = new Date(now + 10000).toISOString();
+
+      const qs = `date[a]={ "now": "${isoNow}" }&date[a]={ "later": "${isoLater}" }&number[b]=1`;
+      expect(parser(qs)).toEqual({
+        date: { a: [{ now: new Date(isoNow) }, { later: new Date(isoLater) }] },
+        number: { b: [1] }
+      });
     });
   });
 });
