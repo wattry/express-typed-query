@@ -188,5 +188,5 @@ Input
 '?user[a]={ "id": 1, name: "John" }'
 
 Output
-{ user: { a: { id: 1, name: 'John' } }}
+{ user: { a: [{ id: 1, name: 'John' }] }}
 ```
