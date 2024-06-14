@@ -59,6 +59,16 @@ beforeEach(() => {
 
 describe('configure', () => {
   describe('error', () => {
+    it('it throws when app is not passed', () => {
+      expect(() => configure())
+        .toThrowError('express app required');
+    });
+
+    it('it throws when app is not an express app', () => {
+      expect(() => configure({}))
+        .toThrowError('express app parameter does not contain set property');
+    });
+
     it('it throws when the JSON is unparsable with the hailMary option', () => {
       configure(app, { hailMary: true });
 
@@ -88,6 +98,20 @@ describe('configure', () => {
   });
 
   describe('success', () => {
+    it('it returns an empty query when the string is not trimmed and is empty', () => {
+      configure(app);
+
+      expect(parser(' '))
+        .toEqual({});
+    });
+
+    it('it returns an empty query when q param is an empty string', () => {
+      configure(app);
+
+      expect(parser('q= '))
+        .toEqual({ q: '' });
+    });
+
     it('sets a query parser', () => {
       expect(configure(app)).toBeUndefined();
       expect(app.set).toHaveBeenCalledWith(setString, expect.any(Function));
@@ -227,7 +251,7 @@ describe('configure', () => {
       configure(app, { hailMary: true });
 
       expect(parser("string[a]=[1, 'name']")).toEqual({
-        string: { a: [ 1, 'name'] }
+        string: { a: [1, 'name'] }
       });
     });
 

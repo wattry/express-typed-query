@@ -5,17 +5,21 @@ import { Logger } from './logger';
 import { Parser } from './parser';
 import { Options, setString } from './types';
 
-export function configure(app: Application, options?: Options) {
+export function configure(app: Application, options: Options = {}) {
+  if (!app) throw new Error('express app required');
+  if (!app.set) throw new Error('express app parameter does not contain set property');
+
   const {
-    logging,
+    logging = {},
     dates = false,
-    hailMary = false
-  }: Options = options || {};
+    hailMary = false,
+    qsOptions = {}
+  }: Options = options;
   const {
     level = 'error',
     tag = true,
     logger: userLogger,
-  } = logging || {};
+  } = logging;
   const logger = userLogger || Logger({ level, tag });
   const parser = Parser(logger, dates, hailMary);
 
@@ -28,7 +32,7 @@ export function configure(app: Application, options?: Options) {
     const trimmedQs = queryString?.trim();
 
     if (trimmedQs) {
-      const params = qs.parse(trimmedQs);
+      const params = qs.parse(trimmedQs, qsOptions);
 
       for (const [key, value] of Object.entries(params)) {
         query[key] = parser(value);

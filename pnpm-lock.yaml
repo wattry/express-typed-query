@@ -27,6 +27,9 @@ importers:
       '@types/node':
         specifier: ^20.13.0
         version: 20.13.0
+      '@types/qs':
+        specifier: ^6.9.15
+        version: 6.9.15
       '@typescript-eslint/eslint-plugin':
         specifier: ^7.11.0
         version: 7.11.0(@typescript-eslint/parser@7.11.0(eslint@8.56.0)(typescript@5.4.5))(eslint@8.56.0)(typescript@5.4.5)

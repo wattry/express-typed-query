@@ -1,3 +1,5 @@
+import { IParseOptions, BooleanOptional } from 'qs';
+
 export const setString: string = 'query parser';
 
 export enum Levels {
@@ -30,6 +32,7 @@ export type Tag = boolean;
 export type LogFunction = (level: string) => string;
 export type LogString = string | LogFunction;
 export type HailMary = boolean;
+export type QsParseOptions = IParseOptions<BooleanOptional>;
 
 export interface Logging {
   logger?: Logger;
@@ -42,4 +45,5 @@ export interface Options {
   logging?: Logging;
   dates?: Dates;
   hailMary?: HailMary;
+  qsOptions?: QsParseOptions;
 }

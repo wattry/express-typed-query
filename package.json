@@ -1,6 +1,6 @@
 {
   "name": "express-typed-query",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "description": "A url query string parser that converts query parameters to the correct Javascript data type",
   "main": "dist/src/index.js",
   "files": [
@@ -17,6 +17,7 @@
     "typescript",
     "types"
   ],
+  "repository": "https://github.com/wattry/express-typed-query",
   "author": "wattry",
   "license": "ISC",
   "devDependencies": {
@@ -25,6 +26,7 @@
     "@types/express": "^4.17.21",
     "@types/jest": "^29.5.12",
     "@types/node": "^20.13.0",
+    "@types/qs": "^6.9.15",
     "@typescript-eslint/eslint-plugin": "^7.11.0",
     "@typescript-eslint/parser": "^7.11.0",
     "eslint": "^8.56.0",
