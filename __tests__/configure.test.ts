@@ -30,7 +30,7 @@ const trace = jest.spyOn(console, 'trace');
   * ******************************************************************** */
 
 const app = express();
-const BASE = { string: "string", boolean: true, number: 1, float: 1.11, null: null, isUndefined: undefined };
+const BASE = { string: "string", boolean: true, number: 1, float: 1.11, null: null, undefined: undefined };
 const stringifyValues = (_: any, value: any) => {
   if (value === undefined) {
     return undefined;
@@ -195,7 +195,7 @@ describe('configure', () => {
       configure(app);
 
       expect(parser('string[a]=1&string[b]=2&string[c]=3')).toEqual({
-        string: { a: [1], b: [2], c: [3] }
+        string: { a: 1, b: 2, c: 3 }
       });
     });
 
@@ -203,7 +203,7 @@ describe('configure', () => {
       configure(app);
 
       expect(parser('string[a]={ "id": 1, "name": "name" }')).toEqual({
-        string: { a: [{ id: 1, name: 'name' }] }
+        string: { a: { id: 1, name: 'name' } }
       });
     });
 
@@ -211,7 +211,7 @@ describe('configure', () => {
       configure(app, { hailMary: true });
 
       expect(parser('string[a]={ id: 1, name: "name" }')).toEqual({
-        string: { a: [{ id: 1, name: 'name' }] }
+        string: { a: { id: 1, name: 'name' } }
       });
     });
 
@@ -219,7 +219,15 @@ describe('configure', () => {
       configure(app, { hailMary: true });
 
       expect(parser("string[a]={ id: 1, name: 'name' }")).toEqual({
-        string: { a: [{ id: 1, name: 'name' }] }
+        string: { a: { id: 1, name: 'name' } }
+      });
+    });
+
+    it('parses unexploded deepObject plain array', () => {
+      configure(app, { hailMary: true });
+
+      expect(parser("string[a]=[1, 'name']")).toEqual({
+        string: { a: [ 1, 'name'] }
       });
     });
 
@@ -263,7 +271,7 @@ describe('configure', () => {
       configure(app, { logging: { level: 'trace' } });
 
       expect(parser('string=one&string=two')).toEqual({ string: ['one', 'two'] });
-      expect(debug).toHaveBeenCalledTimes(7);
+      expect(debug).toHaveBeenCalledTimes(3);
     });
 
     it('parses multiple numbers', () => {
@@ -292,13 +300,13 @@ describe('configure', () => {
       expect(parser('float=1.11&float=2.22')).toEqual({ float: [1.11, 2.22] });
     });
 
-    it('parses unexploded parameters are which an array with one float', () => {
+    it('parses unexploded parameters which are an array with one float', () => {
       configure(app);
 
       expect(parser('float[]=1.11')).toEqual({ float: [1.11] });
     });
 
-    it('parses unexploded parameters are which an array with more than one float', () => {
+    it('parses unexploded parameters which are an array with more than one float', () => {
       configure(app);
 
       expect(parser('float[]=1.11&float[]=2.22')).toEqual({ float: [1.11, 2.22] });
@@ -313,13 +321,19 @@ describe('configure', () => {
       });
     });
 
-    it('parses unexploded parameters are which an array with one boolean', () => {
+    it('parses unexploded parameters which are an array with one boolean', () => {
       configure(app);
 
       expect(parser('boolean[]=true')).toEqual({ boolean: [true] });
     });
 
-    it('parses unexploded parameters are which an array with more than one float', () => {
+    it('parses unexploded parameters which are an array with more than one float', () => {
+      configure(app);
+
+      expect(parser('boolean[]=true&boolean[]=false')).toEqual({ boolean: [true, false] });
+    });
+
+    it('parses unexploded parameters which are an array with more than one float', () => {
       configure(app);
 
       expect(parser('boolean[]=true&boolean[]=false')).toEqual({ boolean: [true, false] });
@@ -360,7 +374,7 @@ describe('configure', () => {
       const qs = `date[a]={ "now": "${isoNow}" }&date[a]={ "later": "${isoLater}" }&number[b]=1`;
       expect(parser(qs)).toEqual({
         date: { a: [{ now: new Date(isoNow) }, { later: new Date(isoLater) }] },
-        number: { b: [1] }
+        number: { b: 1 }
       });
     });
   });

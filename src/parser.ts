@@ -1,45 +1,7 @@
 import check from './check';
-import { Logger, Dates, HailMarry } from './types';
+import { Logger, Dates, HailMary } from './types';
 
-export function Parser(logger: Logger, dates: Dates, hailMary: HailMarry) {
-  function parseQs(key: string, values: any, query: any) {
-    // There are be multiple entries for the same key.
-    if (values.length > 1 || check.isQsStructure(key)) {
-      const isDeepObject = key.match(check.qsDeepObjectRegex);
-
-      if (isDeepObject) {
-        logger.debug('isDeepObject');
-        const object: any = {};
-        const normalizedKey = key.replace(check.qsDeepObjectRegex, '');
-
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const [_, keys] = isDeepObject;
-
-        for (const key of keys) {
-          object[key] = parse(values);
-        }
-
-        if (query[normalizedKey]) {
-          query[normalizedKey] = { ...query[normalizedKey], ...object };
-        } else {
-          query[normalizedKey] = object;
-        }
-      } else {
-        const normalizedKey = key.replace(check.qsArrayRegex, '');
-
-        logger.debug('shallow qs');
-        query[normalizedKey] = parse(values);
-      }
-    } else {
-      const result = parse(values[0]);
-      query[key] = result;
-    }
-  }
-
-  function parseArray(value: any[]): any[] {
-    return value.map((val: any) => parse(val));
-  }
-
+export function Parser(logger: Logger, dates: Dates, hailMary: HailMary) {
   function parse(value: any): any {
     const isNumber = check.isNumber(value);
 
@@ -86,9 +48,22 @@ export function Parser(logger: Logger, dates: Dates, hailMary: HailMarry) {
     return parseObjectOrString(value);
   }
 
+  function parseArray(value: any[]): any[] {
+    return value.map((val: any) => parse(val));
+  }
+
+  function parseJsonString(value: any) {
+    return JSON.parse(value, (_, value) => parse(value));
+  }
 
   function parseObject(value: any) {
-    return JSON.parse(value, (_, value) => parse(value));
+    const object: any = {};
+
+    for (const [key, val] of Object.entries(value)) {
+      object[key] = parse(val);
+    }
+
+    return object;
   }
 
   function parseQuotes(value: any) {
@@ -115,8 +90,10 @@ export function Parser(logger: Logger, dates: Dates, hailMary: HailMarry) {
 
       if (expected) {
         const [, char] = expected;
-        let i = 0;
         const args = [offender, char, offender, location];
+
+        let i = 0;
+
         return `Malformed JSON query: Expected %s\x1b[4m%s\x1b[0m Received %s\x1b[4m \x1b at position %s`.replace(/%s/g, () => {
           const arg = args[i];
           i += 1;
@@ -136,11 +113,14 @@ export function Parser(logger: Logger, dates: Dates, hailMary: HailMarry) {
     // brackets and try parse it to a javascript object.
     // If it is not parsable it will throw an error.
     const isJson = check.isJson(value);
+    const isObject = check.isObject(value);
 
     try {
       if (isJson) {
         logger.debug('isJson', value);
 
+        return parseJsonString(value);
+      } else if (isObject) {
         return parseObject(value);
       }
 
@@ -148,16 +128,16 @@ export function Parser(logger: Logger, dates: Dates, hailMary: HailMarry) {
       return value;
     } catch (error: any) {
       const message = handleJsonParserError(error, value);
-
       logger.warn(message, error.stack);
+
       // If it appears to be a JSON string but is not properly formed we'll need to throw an error.
       if (hailMary && isJson) {
-        logger.warn('Performing risky Hail Mary');
+        logger.warn('Performing Hail Mary');
         try {
           // Remove all quotes and wrap all keys and values in double quotes.
           const parsedJson = parseQuotes(value);
+          const result = parseJsonString(parsedJson);
 
-          const result = parseObject(parsedJson);
           logger.debug('Hail Mary success');
           return result;
         } catch (err: any) {
@@ -167,13 +147,11 @@ export function Parser(logger: Logger, dates: Dates, hailMary: HailMarry) {
 
           throw new Error(message);
         }
-      } else {
-        logger.debug('isObject', value);
-
-        return value;
       }
+
+      return value;
     }
   }
 
-  return { parseQs };
+  return parse;
 }

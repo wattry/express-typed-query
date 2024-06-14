@@ -1,6 +1,6 @@
 # Express Typed Query
 
-No dependency module that converts query strings to Javascript typed objects with optional dates. Can be used in the browser and NodeJS.
+Converts query strings to Javascript typed objects with optional dates using [qs](https://github.com/ljharb/qs).
 
 ## Install
 
@@ -187,5 +187,5 @@ Input
 '?user[a]={ "id": 1, name: "John" }'
 
 Output
-{ user: { a: [{ id: 1, name: 'John' }] }}
+{ user: { a: { id: 1, name: 'John' } }}
 ```

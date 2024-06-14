@@ -1,5 +1,5 @@
 import { Application } from 'express';
-import { ParsedUrlQuery } from 'querystring';
+import qs from 'qs';
 
 import { Logger } from './logger';
 import { Parser } from './parser';
@@ -21,28 +21,20 @@ export function configure(app: Application, options?: Options) {
 
   logger.debug('options', options);
 
-  app.set(setString, (qs: string) => {
-    logger.debug('qs', qs);
-    const query: ParsedUrlQuery = {};
+  app.set(setString, (queryString: string) => {
+    logger.debug('queryString', queryString);
     // If the query string is '' or ' ' we make
-    const queryString = qs?.trim();
+    const query: any = {};
+    const trimmedQs = queryString?.trim();
 
-    if (queryString) {
-      const params = new URLSearchParams(queryString);
-      // Get deduplicate the keys
-      const keys = new Set(params.keys());
+    if (trimmedQs) {
+      const params = qs.parse(trimmedQs);
 
-      for (const key of keys) {
-        logger.debug('key', key);
-        // Get all the values for a possible key, reducing iteration.
-        const values = params.getAll(key);
-        logger.debug('value: ', values);
-
-        parser.parseQs(key, values, query);
+      for (const [key, value] of Object.entries(params)) {
+        query[key] = parser(value);
       }
     }
 
-    logger.debug('query', query);
     return query;
   });
 }
