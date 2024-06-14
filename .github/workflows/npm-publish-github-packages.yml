@@ -16,8 +16,9 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 20
+      - run: pnpm install -g pnpm
       - run: pnpm i --frozen-lockfile
-      - run: npm test
+      - run: pnpm test
 
   publish-gpr:
     needs: build
@@ -31,6 +32,7 @@ jobs:
         with:
           node-version: 20
           registry-url: https://npm.pkg.github.com/
+      - run: pnpm install -g pnpm
       - run: pnpm i --frozen-lockfile
       - run: pnpm build
       - run: npm publish
