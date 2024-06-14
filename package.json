@@ -1,7 +1,7 @@
 {
   "name": "express-typed-query",
   "version": "1.0.15",
-  "description": "A url query string parser that converts query parameters to the correct Javascript data type",
+  "description": "Converts query strings(qs) to Javascript typed objects including dates and malformed JSON",
   "main": "dist/src/index.js",
   "files": [
     "./dist"
@@ -15,7 +15,8 @@
     "qs",
     "express",
     "typescript",
-    "types"
+    "types",
+    "ts"
   ],
   "repository": "https://github.com/wattry/express-typed-query",
   "author": "wattry",

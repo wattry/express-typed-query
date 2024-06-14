@@ -1,6 +1,7 @@
 # Express Typed Query
 
-Converts query strings to Javascript typed objects with optional dates using [qs](https://github.com/ljharb/qs).
+Exhausted from double checking types passed to your data layer? Well this simple package leverages the power of [qs](https://github.com/ljharb/qs) and parses your query sting to usable types. Use real types when exchanging parameters without JSON serialization. Make sure your users can get the data they need in the mode flexible way possible.
+Converts query strings to Javascript typed objects including dates and malformed JSON
 
 ## Install
 
