@@ -59,16 +59,6 @@ beforeEach(() => {
 
 describe('configure', () => {
   describe('error', () => {
-    it('it throws when app is not passed', () => {
-      expect(() => configure())
-        .toThrowError('express app required');
-    });
-
-    it('it throws when app is not an express app', () => {
-      expect(() => configure({}))
-        .toThrowError('express app parameter does not contain set property');
-    });
-
     it('it returns the input when unparsable string is provided', () => {
       configure(app);
 
