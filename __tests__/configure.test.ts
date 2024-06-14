@@ -1,6 +1,6 @@
 import { expect, jest, it } from '@jest/globals';
 import express from 'express';
-import console from 'console';
+import console, { log } from 'console';
 
 /** ********************************************************************
   *                         Local Imports
@@ -67,6 +67,13 @@ describe('configure', () => {
     it('it throws when app is not an express app', () => {
       expect(() => configure({}))
         .toThrowError('express app parameter does not contain set property');
+    });
+
+    it('it returns the input when unparsable string is provided', () => {
+      configure(app);
+
+      expect(parser('``'))
+        .toEqual({ '``' : '' });
     });
 
     it('it throws when the JSON is unparsable with the hailMary option', () => {
