@@ -1,11 +1,11 @@
 {
   "name": "express-typed-query",
-  "version": "1.0.18",
+  "version": "1.0.19",
   "description": "Converts query strings(qs) to Javascript typed objects including dates and malformed JSON",
   "main": "dist/src/index.js",
   "type": "module",
   "files": [
-    "./dist"
+    "./dist/src"
   ],
   "scripts": {
     "test": "jest",
