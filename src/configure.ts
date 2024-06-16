@@ -3,7 +3,7 @@ import qs from 'qs';
 
 import { Logger } from './logger';
 import { Parser } from './parser';
-import { Options, setString } from './types';
+import { AnyObject, LogArg, Options, expressQsStringParser, Value } from './types';
 
 export function configure(app: Application, options: Options = {}) {
   if (!app) throw new Error('express app required');
@@ -17,25 +17,30 @@ export function configure(app: Application, options: Options = {}) {
   }: Options = options;
   const {
     level = 'error',
-    tag = true,
-    logger: userLogger,
+    tag = false,
+    logString = (logLevel: string) => `${new Date().toISOString()} [${logLevel.toUpperCase()}] -`,
+    logger = Logger({ level, tag, logString }),
   } = logging;
-  const logger = userLogger || Logger({ level, tag });
+  logger.info('Initializing express typed parser');
+  logger.debug('options', options as LogArg);
+
   const parser = Parser(logger, dates, hailMary);
 
-  logger.debug('options', options);
-
-  app.set(setString, (queryString: string) => {
+  app.set(expressQsStringParser, (queryString: string) => {
     logger.debug('queryString', queryString);
     // If the query string is '' or ' ' we make
-    const query: any = {};
+    const query: AnyObject = {};
     const trimmedQs = queryString?.trim();
 
     if (trimmedQs) {
-      const params = qs.parse(trimmedQs, qsOptions);
+      const params = Object.entries(qs.parse(trimmedQs, qsOptions));
 
-      for (const [key, value] of Object.entries(params)) {
-        query[key] = parser(value);
+      for (const param of params) {
+        const [key, value] = param;
+        logger.debug('key', key);
+        logger.debug('value', value as Value);
+
+        query[key] = parser(value as Value);
       }
     }
 

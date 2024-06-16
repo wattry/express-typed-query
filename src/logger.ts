@@ -1,17 +1,22 @@
 import { error, warn, info, debug, trace } from 'console';
 
-import { LevelMap, LevelStringMap, Logging, LogFunction } from './types';
+import { Logger, LevelMap, LevelStringMap, LogArgs, LogArg, Logging, LogFunction } from './types';
 import check from './check';
 
-export function Logger(options: Logging) {
+export function Logger(options: Logging): Logger {
   const {
     level = 'error',
     logString = (logLevel: string) => `${new Date().toISOString()} [${logLevel.toUpperCase()}] -`,
-    tag
+    tag = false
   } = options;
   const levelIdx = LevelMap[level];
 
-  function parseLogSafeObjects(args: any[]) {
+  /**
+   * Converts JSON and JS objects to strings to log the value out.
+   * @param args
+   * @returns {string}
+   */
+  function parseLogSafeObjects(args: LogArgs): LogArgs {
     return args.map((arg) => {
       return (check.isArray(arg) || check.isObject(arg))
         ? JSON.stringify(arg, null, 2)
@@ -19,26 +24,26 @@ export function Logger(options: Logging) {
     });
   }
 
-  function log(method: (...args: any) => void, levelIdx: number, thresholdIdx: number = 0, args: any[]) {
+  function log(method: (...args: LogArgs) => void, levelIdx: number, thresholdIdx: number = 0, args: LogArgs) {
     if (levelIdx < thresholdIdx) {
       return null;
     }
 
-    const finalArgs = [];
-    const logLevel = LevelStringMap[levelIdx];
+    const finalArgs: LogArgs = [];
+    const logLevel: string = LevelStringMap[thresholdIdx];
 
     if (tag) {
       finalArgs.push('<etq>');
     }
 
-    if (check.isString(logString)) {
-      finalArgs.push(logString);
+    if (check.isString(logString as LogArg)) {
+      finalArgs.push(logString as LogArg);
     }
 
     if (args?.length) {
-      const parsedArgs = parseLogSafeObjects(args);
+      const parsedArgs: LogArgs = parseLogSafeObjects(args);
 
-      if (check.isFunction(logString)) {
+      if (check.isFunction(logString as LogArg)) {
         const logFn = logString as LogFunction;
 
         finalArgs.push(logFn(logLevel));
@@ -53,10 +58,10 @@ export function Logger(options: Logging) {
   }
 
   return {
-    error: (...args: any[]) => log(error, levelIdx, 0, args),
-    warn: (...args: any[]) => log(warn, levelIdx, 1, args),
-    info: (...args: any[]) => log(info, levelIdx, 2, args),
-    debug: (...args: any[]) => log(debug, levelIdx, 3, args),
-    trace: (...args: any[]) => log(trace, levelIdx, 4, args)
+    error: (...args: LogArgs) => log(error, levelIdx, 0, args),
+    warn: (...args: LogArgs) => log(warn, levelIdx, 1, args),
+    info: (...args: LogArgs) => log(info, levelIdx, 2, args),
+    debug: (...args: LogArgs) => log(debug, levelIdx, 3, args),
+    trace: (...args: LogArgs) => log(trace, levelIdx, 4, args)
   };
 }

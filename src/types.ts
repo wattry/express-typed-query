@@ -1,6 +1,6 @@
 import { IParseOptions, BooleanOptional } from 'qs';
 
-export const setString: string = 'query parser';
+export const expressQsStringParser: string = 'query parser';
 
 export enum Levels {
   error,
@@ -26,7 +26,25 @@ export const LevelStringMap: Record<number, string> = {
   [Levels.trace]: 'trace'
 };
 
-export type Logger = any;
+
+type Primitive = string | number | boolean | Date | null | undefined | string[] | number[] | boolean[] | Date[] | null[] | undefined[];
+
+export interface AnyObject {
+  [s: string]: Value | ValueArray;
+}
+
+export type Value = Primitive | AnyObject;
+export type ValueArray = string[] | number[] | boolean[] | Date[] | null[] | Primitive[] | AnyObject[];
+export type LogArg = Value;
+export type LogArgs = Value[];
+
+export type Logger = {
+  error: (...args: LogArgs) => void;
+  warn: (...args: LogArgs) => void;
+  info: (...args: LogArgs) => void;
+  debug: (...args: LogArgs) => void;
+  trace: (...args: LogArgs) => void;
+};
 export type Dates = boolean;
 export type Tag = boolean;
 export type LogFunction = (level: string) => string;
