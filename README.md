@@ -64,7 +64,7 @@ const eqs = require('express-typed-query');
 
 const app = express();
 
-eqs.configure(app, options);
+eqs.default(app, options);
 ```
 
 ## Options
@@ -72,8 +72,37 @@ eqs.configure(app, options);
 ### Logger
 This package uses JavaScript console logging by default. You can provide a log level to adjust what is logged using the log level option. The default level is "error" if no option is provided.
 
+#### Level (string)
+
+Setting the log level
+
 ```javascript
 const options = { logging: { level: 'debug' } };
+```
+
+#### logString (string|Function)
+
+You can provide a string or function that will be prepended to all logs output by this module. The default log string function is
+
+```ts
+const options = {
+  logging: {
+    level: (logLevel: string) => `${new Date().toISOString()} [${logLevel.toUpperCase()}] -`
+  }
+};
+```
+
+#### tag (boolean)
+
+By default tagging is off. If you'd like to distinguish logs created by this package pass the tag logging option.
+This will prepend '<etq>' to the front of all log messages output by the package.
+
+```ts
+const options = {
+  logging: {
+    tag: true
+  }
+};
 ```
 
 If you'd like to provide your own logger you can use the following. It must have the following levels or aliases in order of precedence:
