@@ -1,29 +1,31 @@
-import express from 'express';
+import express, { Application } from 'express';
 import console from 'console';
 
 /** ********************************************************************
   *                         Local Imports
   * ******************************************************************** */
 
-import { configure } from "../src/configure";
+import { configure } from '../src/configure';
 
 /** ********************************************************************
   *                            Types
   * ******************************************************************** */
 
-import { expressQsStringParser, AnyObject, Value } from "../src/types";
+import { expressQsStringParser, AnyObject, Value } from '../src/types';
 import check from '../src/check';
-import { Application } from 'express';
 
 /** ********************************************************************
   *                            Mocks
   * ******************************************************************** */
 
-const error = jest.spyOn(console, 'error');
-const warn = jest.spyOn(console, 'warn');
-const info = jest.spyOn(console, 'info');
-const debug = jest.spyOn(console, 'debug');
-const trace = jest.spyOn(console, 'trace');
+jest.mock('console', () => ({
+  log: jest.fn(),
+  error: jest.fn(),
+  warn: jest.fn(),
+  info: jest.fn(),
+  debug: jest.fn(),
+  trace: jest.fn()
+}));
 
 /** ********************************************************************
   *                            Setup
@@ -52,11 +54,7 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
-  error.mockClear();
-  warn.mockClear();
-  info.mockClear();
-  debug.mockClear();
-  trace.mockClear();
+  jest.clearAllMocks();
 })
 
 /** ********************************************************************
@@ -65,13 +63,23 @@ beforeEach(() => {
 
 describe('configure', () => {
   describe('error', () => {
-    it('throw the hailMary is not enabled and the structure appears to be JSON', () => {
+    it('throws when app is not provided', () => {
+      expect(() => configure(null!)).toThrow('app required');
+    });
+
+    it('throws when app parameter is not an express app', () => {
+      const appFail = {};
+
+      expect(() => configure(appFail as Application)).toThrow('express app parameter does not contain set property');
+    });
+
+    it('throws the hailMary is not enabled and the structure appears to be JSON', () => {
       configure(app, { logging: { level: 'debug' }});
 
       const message = 'Malformed JSON query - Unexpected non-whitespace character after JSON at position 27: { "id": "1", "name": "name"\x1b[4m },\x1b';
       expect(() => parser('string[a]={ "id": 1, "name": "name" },'))
-        .toThrowError(message);
-      expect(error).toHaveBeenNthCalledWith(
+        .toThrow(message);
+      expect(console.error).toHaveBeenNthCalledWith(
         1,
         expect.stringContaining('[ERROR]'),
         'Parsing JSON failed',
@@ -86,13 +94,13 @@ describe('configure', () => {
       const qs = `filter=${value}`;
 
       expect(() => parser(qs))
-        .toThrowError(message);
-      expect(warn).toHaveBeenNthCalledWith(
+        .toThrow(message);
+      expect(console.warn).toHaveBeenNthCalledWith(
         1,
         expect.stringContaining('[WARN] -'),
         'Performing Hail Mary'
       );
-      expect(error).toHaveBeenNthCalledWith(
+      expect(console.error).toHaveBeenNthCalledWith(
         1,
         expect.stringContaining('[ERROR]'),
         'Hail Mary failed:',
@@ -106,7 +114,7 @@ describe('configure', () => {
       const qs = 'filter={a}';
 
       expect(() => parser(qs))
-        .toThrowError('Malformed JSON query - Expected \':\' after property name in JSON at position 4: Expected {"a"\x1b[4m:\x1b[0m Received {"a"\x1b[4m \x1b');
+        .toThrow('Malformed JSON query - Expected \':\' after property name in JSON at position 4: Expected {"a"\x1b[4m:\x1b[0m Received {"a"\x1b[4m \x1b');
     });
   });
 
@@ -116,7 +124,7 @@ describe('configure', () => {
       configure(app, options);
 
       parser('');
-      expect(debug).toHaveBeenNthCalledWith(
+      expect(console.debug).toHaveBeenNthCalledWith(
         1,
         '<etq>',
         expect.stringContaining('[DEBUG]'),
@@ -130,7 +138,7 @@ describe('configure', () => {
       configure(app, options);
 
       parser('');
-      expect(debug).toHaveBeenNthCalledWith(
+      expect(console.debug).toHaveBeenNthCalledWith(
         1,
         'test',
         'options',
@@ -144,7 +152,7 @@ describe('configure', () => {
       configure(app, options);
 
       parser('');
-      expect(debug).toHaveBeenNthCalledWith(
+      expect(console.debug).toHaveBeenNthCalledWith(
         1,
         `${isoDate} [debug] test -`,
         'options',
@@ -242,7 +250,7 @@ describe('configure', () => {
     it('parses a correctly formed JSON string without the hailMary option with all quoted values', () => {
       configure(app);
 
-      const qs = 'filter={ "string": "string", "boolean": "true", "number": "1", "float": "1.11", "null": "null", "array": ["string", "true", "1", "1.11", "null"] }';
+      const qs = 'filter={ "string": "string", "boolean": "true", "number": "1", "float": "1.11", "null": "null", "undefined": "undefined", "array": ["string", "true", "1", "1.11", "null", "undefined"] }';
 
       expect(parser(qs)).toEqual(expected);
     });
@@ -261,7 +269,7 @@ describe('configure', () => {
     it('replaces all quotes and tries to parse the entries with the hailMary option with malformed JSON', () => {
       configure(app, { hailMary: true });
 
-      const qs = 'filter={string: "string", \'boolean\': true", number: \'1", float: "1.11", null: "null", array: ["string", true", "1", "1.11", "null"] }';
+      const qs = 'filter={string: "string", \'boolean\': true", number: \'1", float: "1.11", null: "null", array: ["string", true", "1", "1.11", "null", "undefined"] }';
 
       expect(parser(qs)).toEqual(expected);
     });
@@ -286,7 +294,7 @@ describe('configure', () => {
       expect(parser('string[]=one')).toEqual({
         string: ['one']
       });
-      expect(debug).not.toHaveBeenCalled();
+      expect(console.debug).not.toHaveBeenCalled();
     });
 
     it('parses multiple array parameters which are strings', () => {
@@ -295,7 +303,7 @@ describe('configure', () => {
       expect(parser('string[]=one&string[]=two')).toEqual({
         string: ['one', 'two']
       });
-      expect(debug).not.toHaveBeenCalled();
+      expect(console.debug).not.toHaveBeenCalled();
     });
 
     it('parses repeated keys which are numbers', () => {
@@ -334,7 +342,7 @@ describe('configure', () => {
       configure(app);
 
       expect(parser('float[]=1.11&float[]=2.22')).toEqual({ float: [1.11, 2.22] });
-      expect(error).not.toHaveBeenCalled();
+      expect(console.error).not.toHaveBeenCalled();
     });
 
     it('parses repeated keys which are booleans', () => {
@@ -369,6 +377,8 @@ describe('configure', () => {
       const now = Date.now();
       const isoNow = new Date(now).toISOString();
       const isoLater = new Date(now + 10000).toISOString();
+
+      console.log(`date=${isoNow}&date=${isoLater}&number=1&number=2`);
 
       expect(parser(`date=${isoNow}&date=${isoLater}&number=1&number=2`)).toEqual({
         date: [new Date(now), new Date(isoLater)],

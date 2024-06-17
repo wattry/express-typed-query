@@ -37,7 +37,7 @@ const config = tsEslint.config(
   },
   {
     // enable jest rules on test files
-    files: ['__test__/**'],
+    files: ['test/**'],
     ...jestPlugin.configs['flat/recommended'],
   },
 );

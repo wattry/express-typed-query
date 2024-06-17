@@ -1,6 +1,4 @@
-import { configure } from "./configure";
-export * from "./check";
-
-export { configure };
+export { configure } from "./configure";
+export { configure as etq } from "./configure";
+export * as check from "./check";
 export { configure as default } from './configure';
-export * from './configure';
