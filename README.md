@@ -159,6 +159,16 @@ const output = { filter: {
 }}
 ```
 
+### ignore (Map<string, boolean>)
+
+In some cases we have keys that should always remain in the type they are set. For example when using a q parameter ?q="1234"
+that would be parsed to a number and when searching on a text field we'd run into issues. You can pass in an array of keys to
+instruct the parser to return the original value.
+
+```ts
+const options: Options = { ignore: ['q'] };
+```
+
 ## Parameter Parsing
 
 Utilizing terms from the [Open API 3.1.0 spec](https://swagger.io/specification/#parameter-object), this module will parse form and deepObjects using the explode settings to convert each to their respective representation.

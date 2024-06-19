@@ -1,18 +1,23 @@
 import check from './check';
-import { Logger, Dates, HailMary, LogArg, Value, AnyObject, ValueArray, LogArgs } from './types';
+import { TLogArg, TValue, IAnyObject, TValueArray, TLogArgs, TParser, IPopulatedOptions, IRules } from './types';
 
-export function Parser(logger: Logger, dates: Dates, hailMary: HailMary) {
-  function parse(value: Value | ValueArray): Value | ValueArray {
+export function Parser(options: IPopulatedOptions, rules: IRules): TParser {
+  const { logger, ignore, hailMary, dates } = options;
+
+  function parse(
+    value: TValue | TValueArray
+  ): TValue | TValueArray {
+
     // Must happen before the number and date checks
-    if (check.isArray(value as Value)) {
-      logger.debug('isArray', value as LogArg);
+    if (check.isArray(value as TValue)) {
+      logger.debug('isArray', value as TLogArg);
 
-      return parseArray(value as ValueArray);
+      return parseArray(value as TValueArray);
     }
 
     // Number.parseFloat will parse the first number in an array so we must check arrays first
-    if (check.isNumber(value as Value)) {
-      logger.debug('isNumber', value as LogArg);
+    if (check.isNumber(value as TValue) && rules.isNumber(value as TValue)) {
+      logger.debug('isNumber', value as TLogArg);
 
 
       if (check.isString(value as string)) {
@@ -24,8 +29,8 @@ export function Parser(logger: Logger, dates: Dates, hailMary: HailMary) {
       return value;
     }
 
-    if (check.isBoolean(value as string | boolean)) {
-      logger.debug('isBoolean', value as LogArg);
+    if (check.isBoolean(value as string | boolean) && rules.isBoolean(value as TValue)) {
+      logger.debug('isBoolean', value as TLogArg);
 
       return (value as string).toString().toLowerCase() === 'true';
     }
@@ -42,26 +47,31 @@ export function Parser(logger: Logger, dates: Dates, hailMary: HailMary) {
       return undefined;
     }
 
-    return parseObjectOrString(value as AnyObject | string);
+    return parseObjectOrString(value as IAnyObject | string);
   }
 
-  function parseArray(value: ValueArray): ValueArray {
-    const mapFunction = (val: Value): Value | ValueArray => parse(val as Value | ValueArray);
+  function parseArray(value: TValueArray): TValueArray {
+    const mapFunction = (val: TValue): TValue | TValueArray => parse(val as TValue | TValueArray);
 
-    return value.map(mapFunction) as ValueArray;
+    return value.map(mapFunction) as TValueArray;
   }
 
-  function parseJsonString(value: string): AnyObject {
-    const jsonParser = (_: unknown, val: Value) => parse(val as Value);
+  function parseJsonString(value: string): IAnyObject {
+    const jsonParser = (key: string, val: TValue) => ignore.has(key)
+      ? val
+      : parse(val as TValue);
 
-    return JSON.parse(value, jsonParser) as AnyObject;
+    return JSON.parse(value, jsonParser) as IAnyObject;
   }
 
-  function parseObject(value: AnyObject) {
-    const object: AnyObject = {};
+  function parseObject(value: IAnyObject) {
+    const object: IAnyObject = {};
 
-    for (const [key, val] of Object.entries(value as AnyObject)) {
-      object[key] = parse(val as Value | ValueArray);
+    for (const [key, val] of Object.entries(value as IAnyObject)) {
+
+      object[key] = ignore.has(key)
+        ? val
+        : parse(val as TValue | TValueArray);
     }
 
     return object;
@@ -73,7 +83,7 @@ export function Parser(logger: Logger, dates: Dates, hailMary: HailMary) {
       .replace(check.quoteReplacerRegex, '"$1"');
   }
 
-  function replace(string: string, args: LogArgs): string {
+  function replace(string: string, args: TLogArgs): string {
     let i = 0;
 
     return string.replace(/%s/g, (): string => {
@@ -88,7 +98,7 @@ export function Parser(logger: Logger, dates: Dates, hailMary: HailMary) {
    * Tries to locate the offending location to underline the issue.
    * @link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Errors/JSON_bad_parse
    */
-  function handleJsonParserError(error: { message: string }, value: string): LogArg {
+  function handleJsonParserError(error: { message: string }, value: string): TLogArg {
     const hasPositions = error.message.indexOf('position');
 
     // If the error is a JSON parsing error we want to illustrate where the issue is.
@@ -126,23 +136,23 @@ export function Parser(logger: Logger, dates: Dates, hailMary: HailMary) {
     return error.message;
   }
 
-  function parseObjectOrString(value: Value) {
+  function parseObjectOrString(value: TValue) {
     // Check if it contains an opening and closing array or object
     // brackets and try parse it to a javascript object.
     // If it is not parsable it will throw an error.
     try {
       if (check.isJson(value)) {
-        logger.debug('isJson', value as LogArg);
+        logger.debug('isJson', value as TLogArg);
 
         return parseJsonString(value as string);
       } else if (check.isObject(value)) {
-        return parseObject(value as AnyObject);
+        return parseObject(value as IAnyObject);
       }
 
       // new Date() will throw an error when non-date strings are provided so let's leave this as the last check before we return a string.
-      if (dates && check.isDate(value as Value)) {
+      if (dates && check.isDate(value as TValue) && rules.isDate(value as TValue)) {
 
-        logger.debug('isDate', value as LogArg);
+        logger.debug('isDate', value as TLogArg);
 
         return new Date(value as string);
       }
@@ -157,7 +167,7 @@ export function Parser(logger: Logger, dates: Dates, hailMary: HailMary) {
         try {
           // Remove all quotes and wrap all keys and values in double quotes.
           const parsedJson: string = parseQuotes(value as string);
-          const result: AnyObject = parseJsonString(parsedJson);
+          const result: IAnyObject = parseJsonString(parsedJson);
 
           logger.debug('Hail Mary success');
           return result;
@@ -183,5 +193,5 @@ export function Parser(logger: Logger, dates: Dates, hailMary: HailMary) {
     }
   }
 
-  return parse;
+  return parse as TParser;
 }

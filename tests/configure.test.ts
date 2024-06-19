@@ -119,6 +119,30 @@ describe('configure', () => {
   });
 
   describe('success', () => {
+    it('does not parse base keys when ignore provided', () => {
+      const options = { ignore: ['q'] };
+
+      configure(app, options);
+
+      expect(parser('q=12345')).toEqual({ q: '12345' });
+    });
+
+    it('does not parse nested keys when ignore provided', () => {
+      const options = { ignore: ['q'] };
+
+      configure(app, options);
+
+      expect(parser('filter={ "q": "12345" }')).toEqual({ filter: { q: '12345' } });
+    });
+
+    it('does not parse when multiple entries are provided', () => {
+      const options = { ignore: ['q', 'id'] };
+
+      configure(app, options);
+
+      expect(parser('q=12345&id=1')).toEqual({ q: '12345', id: '1' });
+    });
+
     it('adds a tag when the tag option is set and the log level is debug', () => {
       const options = { logging: { tag: true, level: 'debug' } };
       configure(app, options);

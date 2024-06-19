@@ -1,8 +1,9 @@
 import { IParseOptions, BooleanOptional } from 'qs';
+import { Application } from 'express';
 
 export const expressQsStringParser: string = 'query parser';
 
-export enum Levels {
+export enum ELevels {
   error,
   warn,
   info,
@@ -10,58 +11,128 @@ export enum Levels {
   trace
 }
 
-export const LevelMap: Record<string, Levels> = {
-  error: Levels.error,
-  warn: Levels.warn,
-  info: Levels.info,
-  debug: Levels.debug,
-  trace: Levels.trace
+export const LevelMap: Record<string, ELevels> = {
+  error: ELevels.error,
+  warn: ELevels.warn,
+  info: ELevels.info,
+  debug: ELevels.debug,
+  trace: ELevels.trace
 };
 
 export const LevelStringMap: Record<number, string> = {
-  [Levels.error]: 'error',
-  [Levels.warn]: 'warn',
-  [Levels.info]: 'info',
-  [Levels.debug]: 'debug',
-  [Levels.trace]: 'trace'
+  [ELevels.error]: 'error',
+  [ELevels.warn]: 'warn',
+  [ELevels.info]: 'info',
+  [ELevels.debug]: 'debug',
+  [ELevels.trace]: 'trace'
 };
 
+export type TPrimitive = string | number | boolean | Date | null | undefined | string[] | number[] | boolean[] | Date[] | null[] | undefined[];
 
-type Primitive = string | number | boolean | Date | null | undefined | string[] | number[] | boolean[] | Date[] | null[] | undefined[];
 
-export interface AnyObject {
-  [s: string]: Value | ValueArray;
+export interface IAnyObject {
+  [s: string]: TValue | TValueArray;
 }
 
-export type Value = Primitive | AnyObject;
-export type ValueArray = string[] | number[] | boolean[] | Date[] | null[] | Primitive[] | AnyObject[];
-export type LogArg = Value;
-export type LogArgs = Value[];
+export type TValue = TPrimitive | IAnyObject;
+export type TValueArray = string[] | number[] | boolean[] | Date[] | null[] | TPrimitive[] | IAnyObject[];
+export type TLogArg = TValue;
+export type TLogArgs = TValue[];
 
-export type Logger = {
-  error: (...args: LogArgs) => void;
-  warn: (...args: LogArgs) => void;
-  info: (...args: LogArgs) => void;
-  debug: (...args: LogArgs) => void;
-  trace: (...args: LogArgs) => void;
+export interface ILogger {
+  error: (...args: TLogArgs) => void;
+  warn: (...args: TLogArgs) => void;
+  info: (...args: TLogArgs) => void;
+  debug: (...args: TLogArgs) => void;
+  trace: (...args: TLogArgs) => void;
 };
-export type Dates = boolean;
-export type Tag = boolean;
-export type LogFunction = (level: string) => string;
-export type LogString = string | LogFunction;
-export type HailMary = boolean;
-export type QsParseOptions = IParseOptions<BooleanOptional>;
+export type TDates = boolean;
+export type TTag = boolean;
+export type TLogFunction = (level: string) => string;
+export type TLogString = string | TLogFunction;
+export type THailMary = boolean;
+export type TQsParseOptions = IParseOptions<BooleanOptional>;
+export type TIgnore = string[];
+export type TIgnoreMap = Map<string, boolean>;
 
-export interface Logging {
-  logger?: Logger;
+export interface ILogging {
+  logger?: ILogger;
   level?: string;
   tag?: boolean;
-  logString?: LogString;
+  logString?: TLogString;
 }
 
-export interface Options {
-  logging?: Logging;
-  dates?: Dates;
-  hailMary?: HailMary;
-  qsOptions?: QsParseOptions;
+type TDefaultRule = () => boolean;
+
+export interface IRuleOptions {
+  isNumber?: TDefaultRule;
+  isBoolean?: TDefaultRule;
+  isDate?: TDefaultRule;
 }
+
+type TRule = (value: TValue) => boolean | TDefaultRule;
+
+export interface IRules {
+  isNumber: TRule
+  isBoolean: TRule
+  isDate: TRule
+}
+
+export interface IOptions {
+  logging?: ILogging;
+  dates?: TDates;
+  hailMary?: THailMary;
+  ignore?: TIgnore;
+  qsOptions?: TQsParseOptions;
+}
+
+export interface IModifyOptions {
+  dates?: TDates;
+  hailMary?: THailMary;
+  ignore?: TIgnore;
+  qsOptions?: TQsParseOptions;
+}
+
+export interface IPopulatedOptions {
+  logger: ILogger;
+  dates: TDates;
+  hailMary: THailMary;
+  ignore: TIgnoreMap;
+}
+
+export type TParser = (value: (TValue | TValueArray)) => TValue;
+export type TOverrideParser = (queryString: string) => IAnyObject;
+export type TOverride = (userParser: TOverrideParser) => void;
+export type TModifyParser = (options: IModifyOptions) => void;
+
+export type TDefaultParser = (
+  parser: TParser,
+  logger: ILogger,
+  dates: TDates,
+  hailMary: THailMary,
+  ignore: TIgnoreMap,
+  qsOptions: TQsParseOptions
+) => TParser;
+
+export interface IEtqOptions {
+  dates: TDates;
+  hailMary: THailMary;
+  ignore: TIgnore;
+  qsOptions: TQsParseOptions;
+};
+
+export interface IEtq {
+  default: () => void;
+  override: TOverride;
+  modify: TModifyParser;
+  restore: () => void;
+}
+
+export type TEtq = (
+  app: Application,
+  logger: ILogger,
+  dates: TDates,
+  hailMary: THailMary,
+  ignore: TIgnore,
+  qsOptions: TQsParseOptions
+) => IEtq
