@@ -6,22 +6,22 @@ import {
   TLogArg,
   IOptions,
   ILogger,
-  IEtq,
-  IRuleOptions,
-  TDefaultRule,
-  TRule,
-  IRules
+  IRules,
+  TRule
 } from './types';
 
-export function configure(app: Application, options: IOptions = {}, rules: IRuleOptions = {}) {
+export function configure(app: Application, options: IOptions = {}) {
   if (!app) throw new Error('express app required');
   if (!app.set) throw new Error('express app parameter does not contain set property');
+
   const {
     logging = {},
     dates = false,
     hailMary = false,
     ignore = [],
     qsOptions = {},
+    rules = {},
+    global = true,
   } = options;
   const {
     level = 'error',
@@ -32,13 +32,6 @@ export function configure(app: Application, options: IOptions = {}, rules: IRule
 
   logger.info('Initializing express typed parser');
   logger.debug('options', options as TLogArg);
-  const defaultRule = () => true;
-  const etq: IEtq = Etq(app, logger, { dates, hailMary, ignore, qsOptions }, {
-    isNumber: rules.isNumber || defaultRule,
-    isBoolean: rules.isBoolean || defaultRule,
-    isDate: rules.isDate || defaultRule
-  } as IRules);
 
-  etq.default();
-  app.set('etq', etq);
+  Etq(app, logger, { dates, hailMary, ignore, qsOptions, rules, global });
 }

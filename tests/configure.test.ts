@@ -11,7 +11,7 @@ import { configure } from '../src/configure';
   *                            Types
   * ******************************************************************** */
 
-import { expressQsStringParser, AnyObject, Value } from '../src/types';
+import { expressQsStringParser, IAnyObject, TValue } from '../src/types';
 import check from '../src/check';
 
 /** ********************************************************************
@@ -33,19 +33,19 @@ jest.mock('console', () => ({
 
 const app: Application = express();
 const BASE = { string: "string", boolean: true, number: 1, float: 1.11, null: null, undefined: undefined };
-const stringifyValues = (_: unknown, value: Value) => {
+const stringifyValues = (_: unknown, value: TValue) => {
   if (value === undefined) {
     return undefined;
   }
   return !check.isString(value) && !check.isObject(value) ? `${value}` : value
 };
-const parseQs = (array: [string, Value | null][]): string => array.map((entry: [string, Value | null]) => entry[1] ? entry.join('=') : `${entry[0]}=${entry[1]}`).join('&');
-const parser = (qs: string | null): AnyObject | null => {
-  const caller = app.get(expressQsStringParser as string) as (qs: string) => AnyObject;
-
-  return caller(qs as string) as AnyObject;
+const parseQs = (array: [string, TValue | null][]): string => array.map((entry: [string, TValue | null]) => entry[1] ? entry.join('=') : `${entry[0]}=${entry[1]}`).join('&');
+const parser = (qs: string | null): IAnyObject | null => {
+  const caller = app.get(expressQsStringParser as string) as (qs: string) => IAnyObject;
+  
+  return caller(qs as string) as IAnyObject;
 };
-const expectedObject: Value = JSON.parse(JSON.stringify(BASE)) as AnyObject;
+const expectedObject: TValue = JSON.parse(JSON.stringify(BASE)) as IAnyObject;
 const expected = { filter: { ...expectedObject, array: Array.from(Object.values(BASE)) } };
 
 beforeAll(() => {
@@ -125,6 +125,14 @@ describe('configure', () => {
       configure(app, options);
 
       expect(parser('q=12345')).toEqual({ q: '12345' });
+    });
+
+    it('does not parse base keys when ignore provided and enforces an isNumber rule when provided', () => {
+      const options = { ignore: ['q'], rules: { isNumber: (value: TValue) => !((value as string)?.[0] === '0') } };
+
+      configure(app, options);
+
+      expect(parser('q=12345&id=01&id=11&id=1')).toEqual({ q: '12345', id: ['01', 11, 1] });
     });
 
     it('does not parse nested keys when ignore provided', () => {

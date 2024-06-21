@@ -1,4 +1,4 @@
-import { TValue } from "./types";
+import { TValue, ICheck } from "./types";
 
 export const objectRegex: RegExp = /{[\s\S]*}/m;
 export const arrayRegex: RegExp = /\[[\s\S]*\]/m;
@@ -73,4 +73,4 @@ export default {
   isArray,
   isObject,
   isJson
-};
+} as ICheck; 

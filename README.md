@@ -169,6 +169,12 @@ instruct the parser to return the original value.
 const options: Options = { ignore: ['q'] };
 ```
 
+
+### rules ( { rules: IRules } )
+
+In some cases we may want to treat some values differently, for examle we may have an id that is padded with leading 0's
+hence it presents as a number
+
 ## Parameter Parsing
 
 Utilizing terms from the [Open API 3.1.0 spec](https://swagger.io/specification/#parameter-object), this module will parse form and deepObjects using the explode settings to convert each to their respective representation.

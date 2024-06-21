@@ -16,9 +16,8 @@ export function Parser(options: IPopulatedOptions, rules: IRules): TParser {
     }
 
     // Number.parseFloat will parse the first number in an array so we must check arrays first
-    if (check.isNumber(value as TValue) && rules.isNumber(value as TValue)) {
+    if (check.isNumber(value as TValue) && rules.isNumber!(value as TValue, check)) {
       logger.debug('isNumber', value as TLogArg);
-
 
       if (check.isString(value as string)) {
         const parsed = Number.parseFloat(value as string);
@@ -29,7 +28,7 @@ export function Parser(options: IPopulatedOptions, rules: IRules): TParser {
       return value;
     }
 
-    if (check.isBoolean(value as string | boolean) && rules.isBoolean(value as TValue)) {
+    if (check.isBoolean(value as string | boolean) && rules.isBoolean!(value as TValue, check)) {
       logger.debug('isBoolean', value as TLogArg);
 
       return (value as string).toString().toLowerCase() === 'true';
@@ -150,7 +149,7 @@ export function Parser(options: IPopulatedOptions, rules: IRules): TParser {
       }
 
       // new Date() will throw an error when non-date strings are provided so let's leave this as the last check before we return a string.
-      if (dates && check.isDate(value as TValue) && rules.isDate(value as TValue)) {
+      if (dates && check.isDate(value as TValue) && rules.isDate!(value as TValue, check)) {
 
         logger.debug('isDate', value as TLogArg);
 

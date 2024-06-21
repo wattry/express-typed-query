@@ -29,7 +29,6 @@ export const LevelStringMap: Record<number, string> = {
 
 export type TPrimitive = string | number | boolean | Date | null | undefined | string[] | number[] | boolean[] | Date[] | null[] | undefined[];
 
-
 export interface IAnyObject {
   [s: string]: TValue | TValueArray;
 }
@@ -70,12 +69,46 @@ export interface IRuleOptions {
   isDate?: TDefaultRule;
 }
 
-type TRule = (value: TValue) => boolean | TDefaultRule;
+type IsNumber = (value: TValue) => boolean;
+type IsString = (value: TValue) => boolean;
+type IsBoolean = (value: TValue) => boolean;
+type IsDate = (value: TValue) => boolean;
+type IsFunction = (value: TValue) => boolean;
+type IsArray = (value: TValue) => boolean;
+type IsObject = (value: TValue) => boolean;
+type IsJson = (value: TValue) => boolean;
 
+export interface ICheck {
+  objectRegex: RegExp;
+  arrayRegex: RegExp;
+  quoteMatcherRegex: RegExp;
+  quoteReplacerRegex: RegExp;
+  isNumber: IsNumber;
+  isString: IsString;
+  isBoolean: IsBoolean;
+  isDate: IsDate;
+  isFunction: IsFunction;
+  isArray: IsArray;
+  isObject: IsObject;
+  isJson: IsJson;
+}
+
+
+export type TRule = (value: TValue, check: ICheck) => boolean;
 export interface IRules {
-  isNumber: TRule
-  isBoolean: TRule
-  isDate: TRule
+  isNumber?: TRule
+  isBoolean?: TRule
+  isDate?: TRule
+}
+export type TMethod = string;
+export type TPath = string;
+export type TMethodRules = Map<TMethod, IRules> | undefined;
+export type TPathRules = Map<TPath, TMethodRules> | undefined;
+
+export interface IRegistration {
+  method: TMethod;
+  path: TPath;
+  rules: IRules;
 }
 
 export interface IOptions {
@@ -84,6 +117,8 @@ export interface IOptions {
   hailMary?: THailMary;
   ignore?: TIgnore;
   qsOptions?: TQsParseOptions;
+  rules?: IRules;
+  global?: boolean;
 }
 
 export interface IModifyOptions {
@@ -119,6 +154,8 @@ export interface IEtqOptions {
   hailMary: THailMary;
   ignore: TIgnore;
   qsOptions: TQsParseOptions;
+  rules: IRules;
+  global: boolean;
 };
 
 export interface IEtq {

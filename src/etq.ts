@@ -1,5 +1,5 @@
-import { Application, NextFunction } from 'express';
-import qs from 'qs';
+import { Application, Request, Response, NextFunction } from 'express';
+import qs, { ParsedQs } from 'qs';
 
 import { Parser } from './parser';
 
@@ -9,102 +9,166 @@ import {
   TParser,
   ILogger,
   TValue,
-  IEtq,
-  TOverrideParser,
   IEtqOptions,
-  TLogArg,
-  IRules
+  TIgnoreMap,
+  TQsParseOptions,
+  TPathRules,
+  IRules,
+  TRule,
+  TMethodRules,
+  IRegistration
 } from './types';
 
-function defaultParser(logger: ILogger, options: IEtqOptions, rules: IRules) {
+const dates = {
+  dates: false,
+  set(value: boolean) {
+    this.dates = value;
+  },
+  get() {
+    return this.dates;
+  }
+};
+
+const hailMary = {
+  hailMary: false,
+  set(value: boolean) {
+    this.hailMary = value;
+  },
+  get() {
+    return this.hailMary;
+  }
+};
+
+const ignore = {
+  ignore: new Map([]),
+  set(value: string[]) {
+    this.ignore = new Map<string, boolean>(value.map((param: string) => [param, true]));
+  },
+  get() {
+    return this.ignore;
+  }
+};
+
+const qsOptions = {
+  qsOptions: {},
+  set(value: TQsParseOptions) {
+    this.qsOptions = value;
+  },
+  get() {
+    return this.qsOptions;
+  }
+};
+
+const pathRules: TPathRules = new Map();
+const defaultRule: TRule = () => true;
+
+export function register(options: IRegistration) {
+  // @ts-ignore
+  // ignore.set(options.path, new Map([[options.method.toUpperCase(), options.rules]]));
+  pathRules?.set(options.path, new Map([[
+    options.method.toUpperCase(), {
+      isNumber: options.rules?.isNumber || defaultRule,
+      isBoolean: options.rules.isBoolean || defaultRule,
+      isDate: options.rules?.isDate || defaultRule
+    }
+  ]]));
+
+  return (_: Request, __: Response, next: NextFunction) => next();
+}
+
+const etq = {
+  get(logger: ILogger, rules: IRules) {
+    return (queryString: string, opts: IAnyObject) => {
+      logger.debug('queryString', queryString);
+
+      const parser: TParser = Parser({
+        logger,
+        dates: this.dates.get(),
+        hailMary: this.hailMary.get(),
+        ignore: ignore.get() as TIgnoreMap,
+      },
+        rules
+      );
+
+      // If the query string is '' or ' ' we make
+      const query: IAnyObject = {};
+      const trimmedQs = queryString?.trim();
+
+      if (trimmedQs) {
+        const params = Object.entries(qs.parse(trimmedQs, this.qsOptions.get()));
+
+        for (const param of params) {
+          const [key, value] = param;
+          const shouldIgnore = this.ignore.get().has(key);
+          logger.debug('key', key, 'ignore: ', shouldIgnore);
+          logger.debug('value', value as TValue);
+
+          query[key] = shouldIgnore
+            ? value as string
+            : parser(value as TValue);
+        }
+      }
+
+      logger.debug('query', query);
+      return query;
+    }
+  },
+  dates,
+  hailMary,
+  ignore,
+  qsOptions,
+  pathRules
+}
+
+export function Etq(app: Application, logger: ILogger, options: IEtqOptions): void {
   const {
     dates,
     hailMary,
     ignore,
-    qsOptions
+    qsOptions,
+    rules: iRules,
+    global
   } = options;
 
-  return (queryString: string) => {
-    logger.debug('queryString', queryString);
-    const ignoreMap = new Map<string, boolean>(ignore.map((param) => [param, true]));
-    const parser: TParser = Parser({ logger, dates, hailMary, ignore: ignoreMap }, rules);
+  etq.dates.set(dates);
+  etq.hailMary.set(hailMary);
+  etq.ignore.set(ignore);
+  etq.qsOptions.set(qsOptions);
 
-    // If the query string is '' or ' ' we make
-    const query: IAnyObject = {};
-    const trimmedQs = queryString?.trim();
+  if (global) {
+    const rules: IRules = {
+      isNumber: iRules?.isNumber || defaultRule,
+      isBoolean: iRules?.isBoolean || defaultRule,
+      isDate: iRules?.isDate || defaultRule
+    };
 
-    if (trimmedQs) {
-      const params = Object.entries(qs.parse(trimmedQs, qsOptions));
+    const parser = etq.get(logger, rules);
 
-      for (const param of params) {
-        const [key, value] = param;
-        const shouldIgnore = ignoreMap.has(key);
+    app.set(expressQsStringParser, parser);
+  } else {
+    app.set('pathRules', pathRules);
 
-        logger.debug('key', key, 'ignore: ', shouldIgnore);
-        logger.debug('value', value as TValue);
+    app.use((request: Request, _: Response, next: NextFunction) => {
+      app.set(expressQsStringParser, () => {});
 
-        query[key] = shouldIgnore
-          ? value as string
-          : parser(value as TValue);
+      const { originalUrl, method } = request;
+      const [path, queryString] = originalUrl.split('?');
+      const methodRules: TMethodRules = pathRules?.get(path);
+      const methodRule = methodRules?.get(method);
+      const rules: IRules = {
+        isNumber: methodRule?.isNumber || defaultRule,
+        isBoolean: methodRule?.isBoolean || defaultRule,
+        isDate: methodRule?.isDate || defaultRule
+      };
+      const parser = etq.get(logger, rules);
+
+      try {
+        request.query = parser(queryString, {}) as ParsedQs;
+
+        next();
+      } catch (error) {
+        next(error);
       }
-    }
-
-    logger.debug('query', query);
-    return query;
+    });
   }
-}
-
-export function Etq(app: Application, logger: ILogger, options: IEtqOptions, rules: IRules): IEtq {
-  return {
-    qs: () => {
-      return (_: Request, __: Response, next: NextFunction) => {
-        logger.debug('<restore>');
-
-        app.delete(expressQsStringParser);
-        app.set(expressQsStringParser, 'extended');
-
-        if (next) {
-          next();
-        }
-      }
-    },
-    restore: () => {
-      return (_: Request, __: Response, next: NextFunction) => {
-        logger.debug('<restore>');
-
-        app.delete(expressQsStringParser);
-        app.set(expressQsStringParser, defaultParser(logger, options, rules));
-
-        next();
-      }
-    },
-    default: () => {
-      logger.debug('<default>');
-      app.delete(expressQsStringParser);
-      app.set(expressQsStringParser, defaultParser(logger, options, rules));
-    },
-    override: (userParser: TOverrideParser) => {
-      return (_: Request, __: Response, next: NextFunction) => {
-        logger.debug('<override>');
-        app.delete(expressQsStringParser);
-        app.set(expressQsStringParser, userParser);
-
-        next();
-      }
-    },
-    modify: (iOptions) => {
-      logger.debug('<modify>', 'iOptions', iOptions as TLogArg);
-      const iHailMary = iOptions?.hailMary || options.hailMary;
-      const iDates = iOptions?.dates || options.dates;
-      const iIgnore = iOptions?.ignore || options.ignore;
-      const iQsOptions = iOptions?.qsOptions || options.qsOptions;
-
-      return (_: Request, __: Response, next: NextFunction) => {
-        app.delete(expressQsStringParser);
-        app.set(expressQsStringParser, defaultParser(logger, { dates: iDates, hailMary: iHailMary, ignore: iIgnore, qsOptions: iQsOptions }, rules));
-
-        next();
-      }
-    }
-  } as IEtq;
 }
