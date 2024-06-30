@@ -1,4 +1,4 @@
-import check from './check';
+import * as check from './check';
 import { TLogArg, TValue, IAnyObject, TValueArray, TLogArgs, TParser, IPopulatedOptions } from './types';
 
 export function Parser(options: IPopulatedOptions): TParser {

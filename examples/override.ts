@@ -1,8 +1,7 @@
 import { Request, Response, NextFunction, Router } from 'express';
 
 import { configure } from './configure';
-import { register } from '../src/index';
-import { IAnyObject } from '../src/types';
+import * as etq from '../src/index';
 import { exampleHandler } from './example-handler';
 
 // Registering this middleware will execute it prior to calling the query parser middleware.
@@ -38,7 +37,7 @@ router.get('/override', exampleHandler);
  * input: curl http://localhost:3000/override/disable?q=01&id=01&stringId=01&now=2024-06-30T15:57:23.309Z&boolean=true
  * output: {"q":"01","id":1,"stringId":"01","now":"2024-06-30T15:57:23.309Z","boolean":true}
  * ***********************************************************************************************/
-register(router.get('/override/disable', exampleHandler), { disable });
+etq.register(router.get('/override/disable', exampleHandler), { disable });
 
 /* ************************************************************************************************
  *                                  Disable global rules
@@ -46,7 +45,7 @@ register(router.get('/override/disable', exampleHandler), { disable });
  * input: curl http://localhost:3000/override/disable/global?q=01&id=01&stringId=01&now=2024-06-30T15:57:23.309Z&boolean=true
  * output: {"q":1,"id":1,"stringId":"01","now":"2024-06-30T15:57:23.309Z","boolean":true}
  * ***********************************************************************************************/
-register(router.get('/override/disable/global', exampleHandler), { disable, global: false });
+etq.register(router.get('/override/disable/global', exampleHandler), { disable, global: false });
 
 
 /* ************************************************************************************************
@@ -55,7 +54,7 @@ register(router.get('/override/disable/global', exampleHandler), { disable, glob
  * input:  curl http://localhost:3000/override/disable/all?q=01&id=01&stringId=01&now=2024-06-30T15:57:23.309Z&boolean=true
  * output: {"q":1,"id":1,"stringId":1,"now":"2024-06-30T15:57:23.309Z","boolean":true}
  * ***********************************************************************************************/
-register(router.get('/override/disable/all', exampleHandler), { global: false });
+etq.register(router.get('/override/disable/all', exampleHandler), { global: false });
 
 app.use(router);
 

@@ -26,20 +26,11 @@ pnpm add express-typed-query
 
 ```javascript
 import express from 'express';
-import eqs from 'express-typed-query';
+import etq from 'express-typed-query';
 
 const app = express();
 
-eqs.configure(app, options);
-```
-
-```javascript
-import express from 'express';
-import eqs from 'express-typed-query';
-
-const app = express();
-
-eqs(app, options);
+etq.configure(app, options);
 ```
 
 ```javascript
@@ -51,6 +42,16 @@ const app = express();
 configure(app, options);
 ```
 
+
+```javascript
+const express = require('express');
+const etq = require('express-typed-query');
+
+const app = express();
+
+etq.configure(app, options);
+```
+
 ```javascript
 const express = require('express');
 const { configure } = require('express-typed-query');
@@ -60,14 +61,6 @@ const app = express();
 configure(app, options);
 ```
 
-```javascript
-const express = require('express');
-const eqs = require('express-typed-query');
-
-const app = express();
-
-eqs.default(app, options);
-```
 ## Options ([IOptions](https://github.com/wattry/express-typed-query/blob/main/src/types.ts#L72))
 
 ## Global vs Middleware ([TGlobal](https://github.com/wattry/express-typed-query/blob/main/src/types.ts#56))
@@ -103,10 +96,10 @@ const options = { middleware: middlewares }
 
 If you'd like to override the qs parser's behavior you can use this option which
 
-### Logger
+### Logging ([TLogging](https://github.com/wattry/express-typed-query/blob/main/src/types.ts#L63))
 This package uses JavaScript console logging by default. You can provide a log level to adjust what is logged using the log level option. The default level is "error" if no option is provided.
 
-#### Level ([TLevel](https://github.com/wattry/express-typed-query/blob/main/src/types.ts#L52))
+#### level ([TLevel](https://github.com/wattry/express-typed-query/blob/main/src/types.ts#L52))
 
 Setting the log level
 
@@ -121,7 +114,7 @@ You can provide a string or function that will be prepended to all logs output b
 ```ts
 const options = {
   logging: {
-    level: (logLevel: string) => `${new Date().toISOString()} [${logLevel.toUpperCase()}] -`
+    logString: (logLevel: string) => `${new Date().toISOString()} [${logLevel.toUpperCase()}] -`
   }
 };
 ```
