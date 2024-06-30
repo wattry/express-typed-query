@@ -1,7 +1,9 @@
 # Express Typed Query
 
-Exhausted from double checking types passed to your data layer? Well this simple package leverages the power of [qs](https://github.com/ljharb/qs) and parses your query sting to usable types. Use real types when exchanging parameters without JSON serialization. Make sure your users can get the data they need in the most flexible way possible.
-Converts query strings to Javascript typed objects including dates and malformed JSON
+Exhausted from double checking types passed to your data layer? Well this simple package leverages the power of [qs](https://github.com/ljharb/qs) and parses your query sting to usable types. Use real types when exchanging parameters without JSON serialization. Make sure your users can get the data they need in the most flexible way possible. Converts query strings to Javascript typed objects including dates and malformed JSON.
+
+#### [Github](https://github.com/wattry/express-typed-query)
+#### [NPM](https://www.npmjs.com/package/express-typed-query)
 
 ## Install
 
@@ -83,7 +85,19 @@ When disabling the global parser, you'll need to register routes that will be ig
 
 ### middleware ({ global: false }) ([TMiddlewareOption](https://github.com/wattry/express-typed-query/blob/main/src/types.ts#L70))
 
-When disabling the global options this will allow you to register a middleware or several middlewares to run before the query is parsed.
+When disabling the global options this will allow you to register a middleware or several middlewares to run before the query is parsed. This can be a single middleware OR an array.
+
+```typescript
+const middleware = (request, response, next) => {
+  // do work here
+
+  next();
+};
+
+const middlewares = [middleware];
+
+const options = { middleware: middlewares }
+```
 
 ### qsOptions ([TQsParseOptions](https://github.com/wattry/express-typed-query/blob/main/src/types.ts#L57))
 
