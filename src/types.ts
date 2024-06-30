@@ -1,5 +1,5 @@
 import { IParseOptions, BooleanOptional } from 'qs';
-import { Application } from 'express';
+import { Application, Request, Response, NextFunction } from 'express';
 
 export const expressQsStringParser: string = 'query parser';
 
@@ -45,29 +45,41 @@ export interface ILogger {
   debug: (...args: TLogArgs) => void;
   trace: (...args: TLogArgs) => void;
 };
+
 export type TDates = boolean;
 export type TTag = boolean;
 export type TLogFunction = (level: string) => string;
+export type TLevel = 'error' | 'warn' | 'info' | 'debug' | 'trace';
 export type TLogString = string | TLogFunction;
+
 export type THailMary = boolean;
+export type TGlobal = boolean;
 export type TQsParseOptions = IParseOptions<BooleanOptional>;
-export type TIgnore = string[];
-export type TIgnoreMap = Map<string, boolean>;
+export type TDisable = string[];
+
+export type TMiddleware = (request: Request, response: Response, next: NextFunction) => void;
+export type TMiddlewares = TMiddleware[];
 
 export interface ILogging {
   logger?: ILogger;
-  level?: string;
-  tag?: boolean;
+  level?: TLevel;
+  tag?: TTag;
   logString?: TLogString;
 }
 
-type TDefaultRule = () => boolean;
+export type TMidllewareOption = TMiddlewares | TMiddleware | null;
 
-export interface IRuleOptions {
-  isNumber?: TDefaultRule;
-  isBoolean?: TDefaultRule;
-  isDate?: TDefaultRule;
+export interface IOptions {
+  global?: TGlobal;
+  logging?: ILogging;
+  dates?: TDates;
+  hailMary?: THailMary;
+  disable?: TDisable;
+  qsOptions?: TQsParseOptions;
+  middleware?: TMidllewareOption;
 }
+
+export type TDisableMap = Map<string, boolean>;
 
 type IsNumber = (value: TValue) => boolean;
 type IsString = (value: TValue) => boolean;
@@ -93,38 +105,20 @@ export interface ICheck {
   isJson: IsJson;
 }
 
-
-export type TRule = (value: TValue, check: ICheck) => boolean;
-export interface IRules {
-  isNumber?: TRule
-  isBoolean?: TRule
-  isDate?: TRule
-}
 export type TMethod = string;
 export type TPath = string;
-export type TMethodRules = Map<TMethod, IRules> | undefined;
-export type TPathRules = Map<TPath, TMethodRules> | undefined;
+export type TMethodDisable = Map<TMethod, TDisable> | undefined;
+export type TPathDisable = Map<TPath, TMethodDisable> | undefined;
 
 export interface IRegistration {
   method: TMethod;
   path: TPath;
-  rules: IRules;
-}
-
-export interface IOptions {
-  logging?: ILogging;
-  dates?: TDates;
-  hailMary?: THailMary;
-  ignore?: TIgnore;
-  qsOptions?: TQsParseOptions;
-  rules?: IRules;
-  global?: boolean;
 }
 
 export interface IModifyOptions {
   dates?: TDates;
   hailMary?: THailMary;
-  ignore?: TIgnore;
+  disable?: TDisable;
   qsOptions?: TQsParseOptions;
 }
 
@@ -132,7 +126,7 @@ export interface IPopulatedOptions {
   logger: ILogger;
   dates: TDates;
   hailMary: THailMary;
-  ignore: TIgnoreMap;
+  disable: TDisableMap;
 }
 
 export type TParser = (value: (TValue | TValueArray)) => TValue;
@@ -145,17 +139,17 @@ export type TDefaultParser = (
   logger: ILogger,
   dates: TDates,
   hailMary: THailMary,
-  ignore: TIgnoreMap,
+  disable: TDisableMap,
   qsOptions: TQsParseOptions
 ) => TParser;
 
 export interface IEtqOptions {
   dates: TDates;
   hailMary: THailMary;
-  ignore: TIgnore;
+  disable: TDisable;
   qsOptions: TQsParseOptions;
-  rules: IRules;
   global: boolean;
+  middleware: TMiddlewares;
 };
 
 export interface IEtq {
@@ -170,6 +164,6 @@ export type TEtq = (
   logger: ILogger,
   dates: TDates,
   hailMary: THailMary,
-  ignore: TIgnore,
+  disable: TDisable,
   qsOptions: TQsParseOptions
 ) => IEtq

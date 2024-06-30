@@ -3,11 +3,9 @@ import { Application } from 'express';
 import { Logger } from './logger';
 import { Etq } from './etq';
 import {
-  TLogArg,
   IOptions,
   ILogger,
-  IRules,
-  TRule
+  ILogging
 } from './types';
 
 export function configure(app: Application, options: IOptions = {}) {
@@ -18,20 +16,24 @@ export function configure(app: Application, options: IOptions = {}) {
     logging = {},
     dates = false,
     hailMary = false,
-    ignore = [],
+    disable = [],
     qsOptions = {},
-    rules = {},
     global = true,
-  } = options;
+    middleware
+  } = options as IOptions;
   const {
     level = 'error',
     tag = false,
     logString = (logLevel: string) => `${new Date().toISOString()} [${logLevel.toUpperCase()}] -`,
     logger = Logger({ level, tag, logString }) as ILogger
-  } = logging;
+  } = logging as ILogging;
+  logger.debug('Initializing express typed parser', { logging, dates, hailMary, disable, qsOptions, global } as any);
 
-  logger.info('Initializing express typed parser');
-  logger.debug('options', options as TLogArg);
+  const middlewares = middleware
+    ? Array.isArray(middleware)
+      ? middleware
+      : [middleware]
+    : [];
 
-  Etq(app, logger, { dates, hailMary, ignore, qsOptions, rules, global });
+  Etq(app, logger, { dates, hailMary, disable, qsOptions, global, middleware: middlewares });
 }

@@ -1,7 +1,15 @@
+import qs from 'qs';
+
+/* ************************************************************************************************
+ *                                          Imported Types
+ * ***********************************************************************************************/
 import { Application, Request, Response, NextFunction } from 'express';
-import qs, { ParsedQs } from 'qs';
 
 import { Parser } from './parser';
+
+/* ************************************************************************************************
+ *                                          Custom Types
+ * ***********************************************************************************************/
 
 import {
   expressQsStringParser,
@@ -10,14 +18,18 @@ import {
   ILogger,
   TValue,
   IEtqOptions,
-  TIgnoreMap,
+  TDisableMap,
   TQsParseOptions,
-  TPathRules,
-  IRules,
-  TRule,
-  TMethodRules,
-  IRegistration
+  TDisable,
+  TMethod,
+  TPath,
+  TMiddleware,
+  TGlobal
 } from './types';
+
+/* ************************************************************************************************
+ *                                          Global State Objects
+ * ***********************************************************************************************/
 
 const dates = {
   dates: false,
@@ -39,13 +51,45 @@ const hailMary = {
   }
 };
 
-const ignore = {
-  ignore: new Map([]),
-  set(value: string[]) {
-    this.ignore = new Map<string, boolean>(value.map((param: string) => [param, true]));
+const ignoreKeys = {
+  disable: new Map<string, boolean>([]),
+  input: [] as string[],
+  setInput(keys: string[]) {
+    for (const key of keys) {
+      this.input.push(key);
+    }
   },
-  get() {
-    return this.ignore;
+  getInput() {
+    return this.input;
+  },
+  set(keys: string[]) {
+    this.setInput(keys);
+
+    for (const key of keys) {
+      this.disable.set(key, true);
+    }
+  },
+  get(): TDisableMap {
+    return this.disable;
+  }
+};
+
+const pathDisableKeys = {
+  disable: new Map<TPath, Map<TMethod, { global: TGlobal, methods: TDisableMap }>>([]),
+  set(path: TPath, method: TMethod, keys: string[], global: TGlobal) {
+    const keyArray: [string, boolean][] = keys?.map((key: string) => [key, true]);
+    const ignoreMethods = this.disable.get(path);
+
+    if (ignoreMethods) {
+      ignoreMethods.set(method, { global, methods: new Map(keyArray) });
+
+      this.disable.set(path, ignoreMethods);
+    } else {
+      this.disable.set(path, new Map([[method, { global, methods: new Map(keyArray) }]]));
+    }
+  },
+  get(path: TPath, method: TMethod): { global: TGlobal, methods: TDisableMap } {
+    return this.disable?.get(path)?.get(method) || { global: true, methods: new Map([]) };
   }
 };
 
@@ -59,36 +103,17 @@ const qsOptions = {
   }
 };
 
-const pathRules: TPathRules = new Map();
-const defaultRule: TRule = () => true;
-
-export function register(options: IRegistration) {
-  // @ts-ignore
-  // ignore.set(options.path, new Map([[options.method.toUpperCase(), options.rules]]));
-  pathRules?.set(options.path, new Map([[
-    options.method.toUpperCase(), {
-      isNumber: options.rules?.isNumber || defaultRule,
-      isBoolean: options.rules.isBoolean || defaultRule,
-      isDate: options.rules?.isDate || defaultRule
-    }
-  ]]));
-
-  return (_: Request, __: Response, next: NextFunction) => next();
-}
-
 const etq = {
-  get(logger: ILogger, rules: IRules) {
-    return (queryString: string, opts: IAnyObject) => {
+  get(logger: ILogger, disable: TDisableMap) {
+    return (queryString: string): IAnyObject => {
       logger.debug('queryString', queryString);
 
       const parser: TParser = Parser({
         logger,
         dates: this.dates.get(),
         hailMary: this.hailMary.get(),
-        ignore: ignore.get() as TIgnoreMap,
-      },
-        rules
-      );
+        disable,
+      });
 
       // If the query string is '' or ' ' we make
       const query: IAnyObject = {};
@@ -99,11 +124,11 @@ const etq = {
 
         for (const param of params) {
           const [key, value] = param;
-          const shouldIgnore = this.ignore.get().has(key);
-          logger.debug('key', key, 'ignore: ', shouldIgnore);
+          const shouldDisable = disable.has(key);
+          logger.debug('key', key, 'disable: ', shouldDisable);
           logger.debug('value', value as TValue);
 
-          query[key] = shouldIgnore
+          query[key] = shouldDisable
             ? value as string
             : parser(value as TValue);
         }
@@ -115,60 +140,88 @@ const etq = {
   },
   dates,
   hailMary,
-  ignore,
-  qsOptions,
-  pathRules
+  disable: ignoreKeys,
+  pathDisableKeys,
+  qsOptions
+};
+
+export function register(router: any, options: { disable?: TDisable | null, global?: boolean } = {}) {
+  if (!router) {
+    throw new ReferenceError('Express router instance required');
+  }
+  const { disable = [], global = true } = options;
+  const routerStack = router.stack;
+  const layer = routerStack[routerStack.length - 1];
+
+  const routeStack = layer.route.stack;
+  const routeLayer = routeStack[routeStack.length - 1];
+  const method = routeLayer.method;
+
+  pathDisableKeys.set(
+    layer.route.path,
+    method.toUpperCase(),
+    global ? [...ignoreKeys.getInput(), ...disable as TDisable] : disable as TDisable,
+    global
+  );
 }
 
 export function Etq(app: Application, logger: ILogger, options: IEtqOptions): void {
   const {
     dates,
     hailMary,
-    ignore,
+    disable,
     qsOptions,
-    rules: iRules,
-    global
+    global,
+    middleware
   } = options;
-
   etq.dates.set(dates);
   etq.hailMary.set(hailMary);
-  etq.ignore.set(ignore);
+  etq.disable.set(disable);
   etq.qsOptions.set(qsOptions);
 
-  if (global) {
-    const rules: IRules = {
-      isNumber: iRules?.isNumber || defaultRule,
-      isBoolean: iRules?.isBoolean || defaultRule,
-      isDate: iRules?.isDate || defaultRule
-    };
+  const disableMap = etq.disable.get();
 
-    const parser = etq.get(logger, rules);
+  if (global) {
+    const parser = etq.get(logger, disableMap);
 
     app.set(expressQsStringParser, parser);
   } else {
-    app.set('pathRules', pathRules);
+    app.set(expressQsStringParser, false);
 
-    app.use((request: Request, _: Response, next: NextFunction) => {
-      app.set(expressQsStringParser, () => {});
-
-      const { originalUrl, method } = request;
-      const [path, queryString] = originalUrl.split('?');
-      const methodRules: TMethodRules = pathRules?.get(path);
-      const methodRule = methodRules?.get(method);
-      const rules: IRules = {
-        isNumber: methodRule?.isNumber || defaultRule,
-        isBoolean: methodRule?.isBoolean || defaultRule,
-        isDate: methodRule?.isDate || defaultRule
-      };
-      const parser = etq.get(logger, rules);
-
+    const handler: TMiddleware = (request: Request, _: Response, next: NextFunction) => {
       try {
-        request.query = parser(queryString, {}) as ParsedQs;
+        // Disable the query parser, also if there are no query params return an empty object
+        const { originalUrl, method } = request;
+        // Get the path and the query string.
+        const [path, queryString] = originalUrl.split('?');
+        logger.debug('method', method, 'path', path);
+
+        // Convert the query string into a map.
+        const pathDisableMap: { global: TGlobal, methods: TDisableMap } = pathDisableKeys.get(path, method);
+        
+        // If no endpoint route ignores are provided and there are globals, we enfoce the globals unless they have disabled globals for this route.
+        const disabled = pathDisableMap.methods.size
+          ? pathDisableMap.methods
+          : pathDisableMap.global
+            ? disableMap
+            : pathDisableMap.methods;
+        const parser = etq.get(logger, disabled);
+
+        (request.query as IAnyObject) = parser(queryString);
 
         next();
-      } catch (error) {
+      } catch (error: any) {
+        logger.error('An error occurred parsing query string please check your configuration', error.message);
         next(error);
       }
-    });
+    };
+
+    if (middleware) {
+      middleware.push(handler);
+
+      app.use(...middleware);
+    } else {
+      app.use(handler);
+    }
   }
 }

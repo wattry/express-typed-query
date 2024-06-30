@@ -6,7 +6,7 @@ import tsEslint from 'typescript-eslint';
 
 const config = tsEslint.config(
   {
-    // config with just ignores is the replacement for `.eslintignore`
+    // config with just ignores is the replacement for `.eslinTDisable`
     ignores: ['**/build/**', '**/dist/**', "jest.config.js"],
   },
   eslint.configs.recommended,

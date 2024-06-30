@@ -1,8 +1,8 @@
 import check from './check';
-import { TLogArg, TValue, IAnyObject, TValueArray, TLogArgs, TParser, IPopulatedOptions, IRules } from './types';
+import { TLogArg, TValue, IAnyObject, TValueArray, TLogArgs, TParser, IPopulatedOptions } from './types';
 
-export function Parser(options: IPopulatedOptions, rules: IRules): TParser {
-  const { logger, ignore, hailMary, dates } = options;
+export function Parser(options: IPopulatedOptions): TParser {
+  const { logger, disable, hailMary, dates } = options;
 
   function parse(
     value: TValue | TValueArray
@@ -16,7 +16,7 @@ export function Parser(options: IPopulatedOptions, rules: IRules): TParser {
     }
 
     // Number.parseFloat will parse the first number in an array so we must check arrays first
-    if (check.isNumber(value as TValue) && rules.isNumber!(value as TValue, check)) {
+    if (check.isNumber(value as TValue)) {
       logger.debug('isNumber', value as TLogArg);
 
       if (check.isString(value as string)) {
@@ -28,7 +28,7 @@ export function Parser(options: IPopulatedOptions, rules: IRules): TParser {
       return value;
     }
 
-    if (check.isBoolean(value as string | boolean) && rules.isBoolean!(value as TValue, check)) {
+    if (check.isBoolean(value as string | boolean)) {
       logger.debug('isBoolean', value as TLogArg);
 
       return (value as string).toString().toLowerCase() === 'true';
@@ -56,7 +56,7 @@ export function Parser(options: IPopulatedOptions, rules: IRules): TParser {
   }
 
   function parseJsonString(value: string): IAnyObject {
-    const jsonParser = (key: string, val: TValue) => ignore.has(key)
+    const jsonParser = (key: string, val: TValue) => disable.has(key)
       ? val
       : parse(val as TValue);
 
@@ -68,7 +68,7 @@ export function Parser(options: IPopulatedOptions, rules: IRules): TParser {
 
     for (const [key, val] of Object.entries(value as IAnyObject)) {
 
-      object[key] = ignore.has(key)
+      object[key] = disable.has(key)
         ? val
         : parse(val as TValue | TValueArray);
     }
@@ -149,7 +149,7 @@ export function Parser(options: IPopulatedOptions, rules: IRules): TParser {
       }
 
       // new Date() will throw an error when non-date strings are provided so let's leave this as the last check before we return a string.
-      if (dates && check.isDate(value as TValue) && rules.isDate!(value as TValue, check)) {
+      if (dates && check.isDate(value as TValue)) {
 
         logger.debug('isDate', value as TLogArg);
 

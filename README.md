@@ -66,13 +66,33 @@ const app = express();
 
 eqs.default(app, options);
 ```
+## Options ([IOptions](https://github.com/wattry/express-typed-query/blob/main/src/types.ts#L72))
 
-## Options
+## Global vs Middleware ([TGlobal](https://github.com/wattry/express-typed-query/blob/main/src/types.ts#56))
+
+The global pattern is used by default which will implement the query parser as a function using the set and get methods on the Express app object. Keep in mind that this config must occur before
+any app.use calls.
+
+This will only allow you to disable keys at a global level. If you have keys for specific endpoints,
+whose key/value pairs should not be parsed you'll have to set the global option to false.
+
+See [examples/global.ts](./examples/global.ts) for examples run `pnpm run serve-global`
+
+When disabling the global parser, you'll need to register routes that will be ignored. See the [examples/override.ts](./examples/override.ts) for override examples.
+`pnpm run serve-override`
+
+### middleware ({ global: false }) ([TMidllewareOption](https://github.com/wattry/express-typed-query/blob/main/src/types.ts#L70))
+
+When disabling the global options this will allow you to register a middleware or several middlewares to run before the query is parsed.
+
+### qsOptions ([TQsParseOptions](https://github.com/wattry/express-typed-query/blob/main/src/types.ts#L57))
+
+If you'd like to override the qs parser's behavior you can use this option which
 
 ### Logger
 This package uses JavaScript console logging by default. You can provide a log level to adjust what is logged using the log level option. The default level is "error" if no option is provided.
 
-#### Level (string)
+#### Level ([TLevel](https://github.com/wattry/express-typed-query/blob/main/src/types.ts#L52))
 
 Setting the log level
 
@@ -80,7 +100,7 @@ Setting the log level
 const options = { logging: { level: 'debug' } };
 ```
 
-#### logString (string|Function)
+#### logString ([TLogString](https://github.com/wattry/express-typed-query/blob/main/src/types.ts#L53))
 
 You can provide a string or function that will be prepended to all logs output by this module. The default log string function is
 
@@ -92,10 +112,9 @@ const options = {
 };
 ```
 
-#### tag (boolean)
+#### tag ([TTag](https://github.com/wattry/express-typed-query/blob/main/src/types.ts#L50))
 
-By default tagging is off. If you'd like to distinguish logs created by this package pass the tag logging option.
-This will prepend '<etq>' to the front of all log messages output by the package.
+By default tagging is off. If you'd like to distinguish logs created by this package pass the tag logging option. This will prepend '<etq>' to the front of all log messages output by the package.
 
 ```ts
 const options = {
@@ -105,7 +124,9 @@ const options = {
 };
 ```
 
-If you'd like to provide your own logger you can use the following. It must have the following levels or aliases in order of precedence:
+### logger ([ILogger](https://github.com/wattry/express-typed-query/blob/main/src/types.ts#L41))
+
+If you'd like to provide your own logger. This will override all of the prior logging settings set. It must have the following level methods in order of precedence:
 
 ```txt
 error 0
@@ -119,7 +140,7 @@ trace 4
 const options = { logging: { logger: <Logger> } };
 ```
 
-### Dates
+### Dates ([TDates](https://github.com/wattry/express-typed-query/blob/main/src/types.ts#L49))
 
 If you'd like dates to be parsed from strings you can use the following option
 
@@ -129,11 +150,10 @@ const options = { dates: true };
 
 This option will try parse date strings that are parsable into date objects.
 
-### Hail Mary
+### Hail Mary ([THailMary](https://github.com/wattry/express-typed-query/blob/main/src/types.ts#L55))
 
-Sometimes complex JSON queries may have mistakes or incorrect quotes. Using the hailMary flag will try replace all quotes
-in a string that appears to contain JSON and attempt to parse it. This operation is risky as it makes assumptions regarding the
-string. If it fails an error will be thrown indicating it was unable to be parsed.
+Sometimes complex JSON queries may have mistakes or incorrect quotes. Using the hailMary flag will try replace all quotes in a string that appears to contain JSON and attempt to parse it. 
+This operation is risky as it makes assumptions regarding the string. If it fails an error will be thrown indicating it was unable to be parsed.
 
 If the hailMary flag is not set the original string will be parsed back and error handling will be required by the caller.
 
@@ -159,21 +179,14 @@ const output = { filter: {
 }}
 ```
 
-### ignore (Map<string, boolean>)
+### disable ([TDisable](https://github.com/wattry/express-typed-query/blob/main/src/types.ts#L58))
 
-In some cases we have keys that should always remain in the type they are set. For example when using a q parameter ?q="1234"
-that would be parsed to a number and when searching on a text field we'd run into issues. You can pass in an array of keys to
-instruct the parser to return the original value.
+In some cases we have keys that should always remain in the type they are set. For example when using a q parameter ?q="1234" that would be parsed to a number and when searching on a text field we'd run into issues. You can pass in an array of keys to instruct the parser to disable parsing and return the original value at
+a global level.
 
 ```ts
-const options: Options = { ignore: ['q'] };
+const options: Options = { disable: ['q'] };
 ```
-
-
-### rules ( { rules: IRules } )
-
-In some cases we may want to treat some values differently, for examle we may have an id that is padded with leading 0's
-hence it presents as a number
 
 ## Parameter Parsing
 

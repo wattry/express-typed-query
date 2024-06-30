@@ -16,7 +16,8 @@
   "scripts": {
     "test": "jest",
     "build": "rm -rf dist && tsc",
-    "serve": "nodemon --exec ts-node examples/index.ts",
+    "serve-global": "nodemon --exec ts-node examples/global.ts",
+    "serve-override": "nodemon --exec ts-node examples/override.ts",
     "lint": "eslint ."
   },
   "keywords": [
