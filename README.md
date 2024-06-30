@@ -81,7 +81,7 @@ See [examples/global.ts](./examples/global.ts) for examples run `pnpm run serve-
 When disabling the global parser, you'll need to register routes that will be ignored. See the [examples/override.ts](./examples/override.ts) for override examples.
 `pnpm run serve-override`
 
-### middleware ({ global: false }) ([TMidllewareOption](https://github.com/wattry/express-typed-query/blob/main/src/types.ts#L70))
+### middleware ({ global: false }) ([TMiddlewareOption](https://github.com/wattry/express-typed-query/blob/main/src/types.ts#L70))
 
 When disabling the global options this will allow you to register a middleware or several middlewares to run before the query is parsed.
 

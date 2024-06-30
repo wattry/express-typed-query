@@ -67,7 +67,7 @@ export interface ILogging {
   logString?: TLogString;
 }
 
-export type TMidllewareOption = TMiddlewares | TMiddleware | null;
+export type TMiddlewareOption = TMiddlewares | TMiddleware | null;
 
 export interface IOptions {
   global?: TGlobal;
@@ -76,7 +76,7 @@ export interface IOptions {
   hailMary?: THailMary;
   disable?: TDisable;
   qsOptions?: TQsParseOptions;
-  middleware?: TMidllewareOption;
+  middleware?: TMiddlewareOption;
 }
 
 export type TDisableMap = Map<string, boolean>;
