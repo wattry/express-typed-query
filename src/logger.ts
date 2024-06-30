@@ -1,9 +1,17 @@
 import { error, warn, info, debug, trace } from 'console';
 
-import { Logger, LevelMap, LevelStringMap, LogArgs, LogArg, Logging, LogFunction } from './types';
+import {
+  LevelStringMap,
+  ILogger,
+  LevelMap,
+  TLogArgs,
+  TLogArg,
+  ILogging,
+  TLogFunction
+} from './types';
 import check from './check';
 
-export function Logger(options: Logging): Logger {
+export function Logger(options: ILogging): ILogger {
   const {
     level = 'error',
     logString = (logLevel: string) => `${new Date().toISOString()} [${logLevel.toUpperCase()}] -`,
@@ -16,7 +24,7 @@ export function Logger(options: Logging): Logger {
    * @param args
    * @returns {string}
    */
-  function parseLogSafeObjects(args: LogArgs): LogArgs {
+  function parseLogSafeObjects(args: TLogArgs): TLogArgs {
     return args.map((arg) => {
       return (check.isArray(arg) || check.isObject(arg))
         ? JSON.stringify(arg, null, 2)
@@ -24,27 +32,27 @@ export function Logger(options: Logging): Logger {
     });
   }
 
-  function log(method: (...args: LogArgs) => void, levelIdx: number, thresholdIdx: number = 0, args: LogArgs) {
+  function log(method: (...args: TLogArgs) => void, levelIdx: number, thresholdIdx: number = 0, args: TLogArgs) {
     if (levelIdx < thresholdIdx) {
       return null;
     }
 
-    const finalArgs: LogArgs = [];
+    const finalArgs: TLogArgs = [];
     const logLevel: string = LevelStringMap[thresholdIdx];
 
     if (tag) {
       finalArgs.push('<etq>');
     }
 
-    if (check.isString(logString as LogArg)) {
-      finalArgs.push(logString as LogArg);
+    if (check.isString(logString as TLogArg)) {
+      finalArgs.push(logString as TLogArg);
     }
 
     if (args?.length) {
-      const parsedArgs: LogArgs = parseLogSafeObjects(args);
+      const parsedArgs: TLogArgs = parseLogSafeObjects(args);
 
-      if (check.isFunction(logString as LogArg)) {
-        const logFn = logString as LogFunction;
+      if (check.isFunction(logString as TLogArg)) {
+        const logFn = logString as TLogFunction;
 
         finalArgs.push(logFn(logLevel));
       }
@@ -58,10 +66,10 @@ export function Logger(options: Logging): Logger {
   }
 
   return {
-    error: (...args: LogArgs) => log(error, levelIdx, 0, args),
-    warn: (...args: LogArgs) => log(warn, levelIdx, 1, args),
-    info: (...args: LogArgs) => log(info, levelIdx, 2, args),
-    debug: (...args: LogArgs) => log(debug, levelIdx, 3, args),
-    trace: (...args: LogArgs) => log(trace, levelIdx, 4, args)
+    error: (...args: TLogArgs) => log(error, levelIdx, 0, args),
+    warn: (...args: TLogArgs) => log(warn, levelIdx, 1, args),
+    info: (...args: TLogArgs) => log(info, levelIdx, 2, args),
+    debug: (...args: TLogArgs) => log(debug, levelIdx, 3, args),
+    trace: (...args: TLogArgs) => log(trace, levelIdx, 4, args)
   };
 }

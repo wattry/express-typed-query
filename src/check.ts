@@ -1,11 +1,11 @@
-import { Value } from "./types";
+import { TValue, ICheck } from "./types";
 
 export const objectRegex: RegExp = /{[\s\S]*}/m;
 export const arrayRegex: RegExp = /\[[\s\S]*\]/m;
 export const quoteMatcherRegex: RegExp = /"|'/g;
 export const quoteReplacerRegex: RegExp = /((\d+(\.\d+)?)|\w+)/g;
 
-function isNumber(value: Value) {
+function isNumber(value: TValue) {
   const number = Number.parseFloat(value as string);
 
   if (!Number.isNaN(number) && isFinite(value as number)) {
@@ -15,7 +15,7 @@ function isNumber(value: Value) {
   return false;
 }
 
-function isString(value: Value): value is string {
+function isString(value: TValue): value is string {
   return typeof value === 'string';
 }
 
@@ -29,7 +29,7 @@ function isBoolean(value: string | boolean): boolean {
   }
 }
 
-function isDate(value: Value): boolean {
+function isDate(value: TValue): boolean {
   if (isString(value)) {
     const date = new Date(value);
 
@@ -38,15 +38,15 @@ function isDate(value: Value): boolean {
   return false;
 }
 
-function isFunction(value: Value): boolean {
+function isFunction(value: TValue): boolean {
   return typeof value === 'function';
 }
 
-function isArray(value: Value): boolean {
+function isArray(value: TValue): boolean {
   return value instanceof Array || Object.prototype.toString.call(value) === '[object Array]' || Array.isArray(value);
 }
 
-function isJson(value: Value): boolean {
+function isJson(value: TValue): boolean {
   if (isString(value)) {
     const trimmed = value.trim() as string;
 
@@ -56,7 +56,7 @@ function isJson(value: Value): boolean {
   return false;
 }
 
-function isObject(value: Value): boolean {
+function isObject(value: TValue): boolean {
   return !(value === null) && value instanceof Object && Object.prototype.toString.call(value) === '[object Object]';
 }
 
@@ -73,4 +73,4 @@ export default {
   isArray,
   isObject,
   isJson
-};
+} as ICheck; 

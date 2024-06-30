@@ -1,11 +1,14 @@
 import { Application } from 'express';
-import qs from 'qs';
 
 import { Logger } from './logger';
-import { Parser } from './parser';
-import { AnyObject, LogArg, Options, expressQsStringParser, Value } from './types';
+import { Etq } from './etq';
+import {
+  IOptions,
+  ILogger,
+  ILogging
+} from './types';
 
-export function configure(app: Application, options: Options = {}) {
+export function configure(app: Application, options: IOptions = {}) {
   if (!app) throw new Error('express app required');
   if (!app.set) throw new Error('express app parameter does not contain set property');
 
@@ -13,37 +16,24 @@ export function configure(app: Application, options: Options = {}) {
     logging = {},
     dates = false,
     hailMary = false,
-    qsOptions = {}
-  }: Options = options;
+    disable = [],
+    qsOptions = {},
+    global = true,
+    middleware
+  } = options as IOptions;
   const {
     level = 'error',
     tag = false,
     logString = (logLevel: string) => `${new Date().toISOString()} [${logLevel.toUpperCase()}] -`,
-    logger = Logger({ level, tag, logString }),
-  } = logging;
-  logger.info('Initializing express typed parser');
-  logger.debug('options', options as LogArg);
+    logger = Logger({ level, tag, logString }) as ILogger
+  } = logging as ILogging;
+  logger.debug('Initializing express typed parser', { logging, dates, hailMary, disable, qsOptions, global } as any);
 
-  const parser = Parser(logger, dates, hailMary);
+  const middlewares = middleware
+    ? Array.isArray(middleware)
+      ? middleware
+      : [middleware]
+    : [];
 
-  app.set(expressQsStringParser, (queryString: string) => {
-    logger.debug('queryString', queryString);
-    // If the query string is '' or ' ' we make
-    const query: AnyObject = {};
-    const trimmedQs = queryString?.trim();
-
-    if (trimmedQs) {
-      const params = Object.entries(qs.parse(trimmedQs, qsOptions));
-
-      for (const param of params) {
-        const [key, value] = param;
-        logger.debug('key', key);
-        logger.debug('value', value as Value);
-
-        query[key] = parser(value as Value);
-      }
-    }
-
-    return query;
-  });
+  Etq(app, logger, { dates, hailMary, disable, qsOptions, global, middleware: middlewares });
 }

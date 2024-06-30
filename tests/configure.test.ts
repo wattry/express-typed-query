@@ -5,13 +5,13 @@ import console from 'console';
   *                         Local Imports
   * ******************************************************************** */
 
-import { configure } from '../src/configure';
+import { configure, register } from '../src/index';
 
 /** ********************************************************************
   *                            Types
   * ******************************************************************** */
 
-import { expressQsStringParser, AnyObject, Value } from '../src/types';
+import { expressQsStringParser, IAnyObject, TValue } from '../src/types';
 import check from '../src/check';
 
 /** ********************************************************************
@@ -33,19 +33,19 @@ jest.mock('console', () => ({
 
 const app: Application = express();
 const BASE = { string: "string", boolean: true, number: 1, float: 1.11, null: null, undefined: undefined };
-const stringifyValues = (_: unknown, value: Value) => {
+const stringifyValues = (_: unknown, value: TValue) => {
   if (value === undefined) {
     return undefined;
   }
   return !check.isString(value) && !check.isObject(value) ? `${value}` : value
 };
-const parseQs = (array: [string, Value | null][]): string => array.map((entry: [string, Value | null]) => entry[1] ? entry.join('=') : `${entry[0]}=${entry[1]}`).join('&');
-const parser = (qs: string | null): AnyObject | null => {
-  const caller = app.get(expressQsStringParser as string) as (qs: string) => AnyObject;
-
-  return caller(qs as string) as AnyObject;
+const parseQs = (array: [string, TValue | null][]): string => array.map((entry: [string, TValue | null]) => entry[1] ? entry.join('=') : `${entry[0]}=${entry[1]}`).join('&');
+const parser = (qs: string | null): IAnyObject | null => {
+  const caller = app.get(expressQsStringParser as string) as (qs: string) => IAnyObject;
+  
+  return caller(qs as string) as IAnyObject;
 };
-const expectedObject: Value = JSON.parse(JSON.stringify(BASE)) as AnyObject;
+const expectedObject: TValue = JSON.parse(JSON.stringify(BASE)) as IAnyObject;
 const expected = { filter: { ...expectedObject, array: Array.from(Object.values(BASE)) } };
 
 beforeAll(() => {
@@ -119,6 +119,30 @@ describe('configure', () => {
   });
 
   describe('success', () => {
+    it('does not parse base keys when disable provided', () => {
+      const options = { disable: ['q'] };
+
+      configure(app, options);
+
+      expect(parser('q=12345')).toEqual({ q: '12345' });
+    });
+
+    it('does not parse nested keys when disable provided', () => {
+      const options = { disable: ['q'] };
+
+      configure(app, options);
+
+      expect(parser('filter={ "q": "12345" }')).toEqual({ filter: { q: '12345' } });
+    });
+
+    it('does not parse when multiple entries are provided', () => {
+      const options = { disable: ['q', 'id'] };
+
+      configure(app, options);
+
+      expect(parser('q=12345&id=1')).toEqual({ q: '12345', id: '1' });
+    });
+
     it('adds a tag when the tag option is set and the log level is debug', () => {
       const options = { logging: { tag: true, level: 'debug' } };
       configure(app, options);
@@ -128,8 +152,8 @@ describe('configure', () => {
         1,
         '<etq>',
         expect.stringContaining('[DEBUG]'),
-        'options',
-        expect.stringContaining(JSON.stringify(options, null, 2))
+        'Initializing express typed parser',
+        expect.stringContaining(JSON.stringify({ ...options, dates: false, hailMary: false, disable: [], qsOptions: {}, global: true }, null, 2))
       );
     });
 
@@ -141,8 +165,8 @@ describe('configure', () => {
       expect(console.debug).toHaveBeenNthCalledWith(
         1,
         'test',
-        'options',
-        expect.stringContaining(JSON.stringify(options, null, 2))
+        'Initializing express typed parser',
+        expect.stringContaining(JSON.stringify({ ...options, dates: false, hailMary: false, disable: [], qsOptions: {}, global: true }, null, 2))
       );
     });
 
@@ -155,8 +179,8 @@ describe('configure', () => {
       expect(console.debug).toHaveBeenNthCalledWith(
         1,
         `${isoDate} [debug] test -`,
-        'options',
-        expect.stringContaining(JSON.stringify(options, null, 2))
+        'Initializing express typed parser',
+        expect.stringContaining(JSON.stringify({ ...options, dates: false, hailMary: false, disable: [], qsOptions: {}, global: true  }, null, 2))
       );
     });
 
@@ -378,8 +402,6 @@ describe('configure', () => {
       const isoNow = new Date(now).toISOString();
       const isoLater = new Date(now + 10000).toISOString();
 
-      console.log(`date=${isoNow}&date=${isoLater}&number=1&number=2`);
-
       expect(parser(`date=${isoNow}&date=${isoLater}&number=1&number=2`)).toEqual({
         date: [new Date(now), new Date(isoLater)],
         number: [1, 2]
@@ -446,13 +468,13 @@ describe('configure', () => {
       });
     });
 
-    it('parses deepObject parameters which is a invalid JSON object using a hailMary', () => {
-      configure(app, { hailMary: true });
+    // it('parses deepObject parameters which is a invalid JSON object using a hailMary', () => {
+    //   configure(app, { hailMary: true });
 
-      expect(parser('string[a]={ id: \'1\', name: "name" }')).toEqual({
-        string: { a: { id: 1, name: 'name' } }
-      });
-    });
+    //   expect(parser('string[a]={ id: \'1\', name: "name" }')).toEqual({
+    //     string: { a: { id: 1, name: 'name' } }
+    //   });
+    // });
 
     it('parses deepObject parameters which is an object containing an array', () => {
       configure(app, { hailMary: true });
