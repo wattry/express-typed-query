@@ -59,3 +59,18 @@ export function isJson(value: TValue): boolean {
 export function isObject(value: TValue): boolean {
   return !(value === null) && value instanceof Object && Object.prototype.toString.call(value) === '[object Object]';
 }
+
+export default {
+  objectRegex,
+  arrayRegex,
+  quoteMatcherRegex,
+  quoteReplacerRegex,
+  isNumber,
+  isString,
+  isBoolean,
+  isDate,
+  isFunction,
+  isArray,
+  isJson,
+  isObject
+};

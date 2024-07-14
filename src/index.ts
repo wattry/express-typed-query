@@ -1,3 +1,5 @@
-export { configure } from "./configure";
-export { register } from "./etq";
-export * as check from "./check";
+import { configure } from "./configure";
+import { register } from "./etq";
+
+export { configure, register };
+export default { configure, register };

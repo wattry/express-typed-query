@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig",
+  "compilerOptions": {
+    "declarationDir": "dist/types",
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "removeComments": false,
+    "strict": true
+  },
+  "exclude": [
+    "test/**/*",
+    "dist/types/**/*"
+  ]
+}

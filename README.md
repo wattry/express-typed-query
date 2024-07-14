@@ -24,32 +24,77 @@ pnpm add express-typed-query
 
 ## Usage
 
+### Global
+
+#### MJS / TS
 ```javascript
 import express from 'express';
 import etq from 'express-typed-query';
 
 const app = express();
 
-etq.configure(app, options);
+// Global Middleware
+etq.configure(app, etqOptions);
+
+// ...app middleware and routes...
+
+// OR
+
+// Route Middleware
+etq.configure(app, { global: false, ...etqOptions });
+const router = express.Router();
+const options = { ... };
+
+etq.register(router.get('/path', (req, res, next) => { ... }), options);
+
+// ...app middleware and routes...
 ```
 
 ```javascript
 import express from 'express';
-import { configure } from 'express-typed-query';
+import { configure, register } from 'express-typed-query';
 
 const app = express();
 
+// Global Middleware
 configure(app, options);
+
+// ...app middleware and routes...
+
+// OR
+
+// Route Middleware
+etq.configure(app, { global: false, ...etqOptions });
+const router = express.Router();
+const options = { disable: <true/false>, global: <true/false> };
+
+register(router.get('/path', (req, res, next) => { ... }), options);
+
+// ...app middleware and routes...
 ```
 
-
+#### CommonJs
 ```javascript
 const express = require('express');
 const etq = require('express-typed-query');
 
 const app = express();
 
+// Global Middleware
 etq.configure(app, options);
+
+// ...app middleware and routes...
+
+// OR
+
+// Route Middleware
+etq.configure(app, { global: false, ...etqOptions });
+const router = express.Router();
+const options = { disable: <true/false>, global: <true/false> };
+
+register(router.get('/path', (req, res, next) => { ... }), options);
+
+// ...app middleware and routes...
 ```
 
 ```javascript
@@ -58,7 +103,21 @@ const { configure } = require('express-typed-query');
 
 const app = express();
 
+// Global Middleware
 configure(app, options);
+
+// ...app middleware and routes...
+
+// OR
+
+// Route Middleware
+etq.configure(app, { global: false, ...etqOptions });
+const router = express.Router();
+const options = { disable: <true/false>, global: <true/false> };
+
+register(router.get('/path', (req, res, next) => { ... }), options);
+
+// ...app middleware and routes...
 ```
 
 ## Options ([IOptions](https://github.com/wattry/express-typed-query/blob/main/src/types.ts#L72))
@@ -71,10 +130,10 @@ any app.use calls.
 This will only allow you to disable keys at a global level. If you have keys for specific endpoints,
 whose key/value pairs should not be parsed you'll have to set the global option to false.
 
-See [examples/global.ts](./examples/global.ts) for examples run `pnpm run serve-global`
+See [examples/global.ts](./examples/global.ts) for examples run `pnpm run serve:global`
 
-When disabling the global parser, you'll need to register routes that will be ignored. See the [examples/override.ts](./examples/override.ts) for override examples.
-`pnpm run serve-override`
+When disabling the global parser, you'll need to register routes that will be ignored. See the [examples/routes.ts](./examples/route.ts) for route middleware examples.
+`pnpm run serve:routes`
 
 ### middleware ({ global: false }) ([TMiddlewareOption](https://github.com/wattry/express-typed-query/blob/main/src/types.ts#L70))
 
@@ -267,5 +326,5 @@ pnpm install
 pnpm serve-global
 
 <!-- Middleware -->
-pnpm serve-override
+pnpm serve-routes
 ```

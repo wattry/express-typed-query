@@ -9,7 +9,7 @@ import {
   ILogging,
   TLogFunction
 } from './types';
-import * as check from './check';
+import check from './check';
 
 export function Logger(options: ILogging): ILogger {
   const {

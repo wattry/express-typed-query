@@ -49,7 +49,7 @@ export interface ILogger {
 export type TDates = boolean;
 export type TTag = boolean;
 export type TLogFunction = (level: string) => string;
-export type TLevel = 'error' | 'warn' | 'info' | 'debug' | 'trace';
+export type TLevel = string;
 export type TLogString = string | TLogFunction;
 
 export type THailMary = boolean;

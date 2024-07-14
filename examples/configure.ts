@@ -1,6 +1,6 @@
 import express from 'express';
 
-import * as etq from '../src/index';
+import etq from '../src';
 import { IOptions } from '../src/types';
 
 export function configure(options: IOptions) {
