@@ -55,17 +55,19 @@ export function Parser(options: IPopulatedOptions): TParser {
     return value.map(mapFunction) as TValueArray;
   }
 
-  function parseJsonString(value: string): IAnyObject {
-    const jsonParser = (key: string, val: TValue) => disable.has(key)
+  function jsonParser(key: string, val: TValue) {
+    return disable.has(key)
       ? val
       : parse(val as TValue);
+  }
 
+  function parseJsonString(value: string): IAnyObject {
     return JSON.parse(value, jsonParser) as IAnyObject;
   }
 
   function parseObject(value: IAnyObject) {
     const object: IAnyObject = {};
-
+    
     for (const [key, val] of Object.entries(value as IAnyObject)) {
 
       object[key] = disable.has(key)
@@ -167,7 +169,7 @@ export function Parser(options: IPopulatedOptions): TParser {
           // Remove all quotes and wrap all keys and values in double quotes.
           const parsedJson: string = parseQuotes(value as string);
           const result: IAnyObject = parseJsonString(parsedJson);
-
+          
           logger.debug('Hail Mary success');
           return result;
         } catch (err: unknown) {

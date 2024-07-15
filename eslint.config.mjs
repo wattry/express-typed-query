@@ -1,5 +1,3 @@
-// @ts-check
-
 import eslint from '@eslint/js';
 import jestPlugin from 'eslint-plugin-jest';
 import tsEslint from 'typescript-eslint';
@@ -7,7 +5,7 @@ import tsEslint from 'typescript-eslint';
 const config = tsEslint.config(
   {
     // config with just ignores is the replacement for `.eslinTDisable`
-    ignores: ['**/build/**', '**/dist/**', "jest.config.js"],
+    ignores: ['**/build/**', '**/dist/**', "jest.config.js", "examples", "eslint.config.mjs"],
   },
   eslint.configs.recommended,
   ...tsEslint.configs.strict,

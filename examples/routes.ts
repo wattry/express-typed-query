@@ -6,10 +6,25 @@ import { exampleHandler } from './example-handler';
 
 // Registering this middleware will execute it prior to calling the query parser middleware.
 // This will only work when the etq instance is configured without the global option.
-const middleware = (request: Request, response: Response, next: NextFunction) => {
-  console.log('This is my middleware before query parsing:', request.query);
+const before = (request: Request, response: Response, next: NextFunction) => {
+  // @ts-ignore
+  if (request?.user?.[request.path]?.auth) {
+    next();
+  } else {
+    response.status(401).send('Unauthorized')
+  }
+};
 
-  next();
+const after = async (request: Request, response: Response, next: NextFunction) => {
+  // @ts-ignore
+  const user = request.user;
+  const secret = request.query.secret;
+
+  if (user?.[request.path]?.noAuthParams?.secret && secret) {
+    response.status(403).send('parameter forbidden');
+  } else {
+    next();
+  }
 };
 
 const app = configure({
@@ -17,7 +32,7 @@ const app = configure({
   logging: { level: 'debug' },
   global: false,
   dates: true,
-  middleware: middleware
+  middleware: [before, after]
 });
 
 const router = Router();

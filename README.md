@@ -52,7 +52,7 @@ etq.register(router.get('/path', (req, res, next) => { ... }), options);
 
 ```javascript
 import express from 'express';
-import { configure, register } from 'express-typed-query';
+import { configure, register, init } from 'express-typed-query';
 
 const app = express();
 
@@ -137,18 +137,43 @@ When disabling the global parser, you'll need to register routes that will be ig
 
 ### middleware ({ global: false }) ([TMiddlewareOption](https://github.com/wattry/express-typed-query/blob/main/src/types.ts#L70))
 
-When disabling the global options this will allow you to register a middleware or several middlewares to run before the query is parsed. This can be a single middleware OR an array.
+When disabling the global options this will allow you to register a middleware to run before and/or after the parsing of a query.
+When using a middleware the init function must be called in order to prevent the default parser from performing parsing on
+any middlewares used to manipulate the request or response object.
 
 ```typescript
-const middleware = (request, response, next) => {
-  // do work here
+import express from 'express';
+import etq from 'express-type-query';
 
-  next();
+const app = express();
+const router = express.Router();
+
+etq.init();
+
+// Will be added to the stack and called before query parsing.
+app.use((req, res, next) => {});
+
+// Middleware
+const before = (request, response, next) => {
+  // do work before parsing
 };
 
-const middlewares = [middleware];
+const after = (request, response, next) => {
+  // do work after parsing
+};
 
-const options = { middleware: middlewares }
+// Only run before
+const middlewares = before;
+const middlewares = [before];
+// Run before and after
+const middlewares = [before, after];
+// Only run after
+const middlewares = [null, after];
+
+// Route handler
+const handler = app.get('/get', () => {});
+
+etq.configure(handler, { middleware: middlewares });
 ```
 
 ### qsOptions ([TQsParseOptions](https://github.com/wattry/express-typed-query/blob/main/src/types.ts#L57))

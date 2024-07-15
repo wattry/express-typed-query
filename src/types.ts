@@ -30,7 +30,7 @@ export const LevelStringMap: Record<number, string> = {
 export type TPrimitive = string | number | boolean | Date | null | undefined | string[] | number[] | boolean[] | Date[] | null[] | undefined[];
 
 export interface IAnyObject {
-  [s: string]: TValue | TValueArray;
+  [s: string]: unknown;
 }
 
 export type TValue = TPrimitive | IAnyObject;
@@ -58,7 +58,7 @@ export type TQsParseOptions = IParseOptions<BooleanOptional>;
 export type TDisable = string[];
 
 export type TMiddleware = (request: Request, response: Response, next: NextFunction) => void;
-export type TMiddlewares = TMiddleware[];
+export type TMiddlewares = TMiddleware[] | [null, TMiddleware];
 
 export interface ILogging {
   logger?: ILogger;
@@ -167,3 +167,13 @@ export type TEtq = (
   disable: TDisable,
   qsOptions: TQsParseOptions
 ) => IEtq
+
+export interface IError {
+  message: string;
+  stack: string;
+}
+
+export interface IRegisterOptions {
+  disable?: TDisable,
+  global?: boolean
+}

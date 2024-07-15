@@ -27,13 +27,19 @@ export function configure(app: Application, options: IOptions = {}) {
     logString = (logLevel: string) => `${new Date().toISOString()} [${logLevel.toUpperCase()}] -`,
     logger = Logger({ level, tag, logString }) as ILogger
   } = logging as ILogging;
-  logger.debug('Initializing express typed parser', { logging, dates, hailMary, disable, qsOptions, global } as any);
+  logger.debug('Initializing express typed parser', { logging, dates, hailMary, disable, qsOptions, global });
 
-  const middlewares = middleware
-    ? Array.isArray(middleware)
-      ? middleware
-      : [middleware]
-    : [];
-
-  Etq(app, logger, { dates, hailMary, disable, qsOptions, global, middleware: middlewares });
+  Etq(app,
+    logger, {
+    dates,
+    hailMary,
+    disable,
+    qsOptions,
+    global,
+    middleware: middleware
+      ? Array.isArray(middleware)
+        ? middleware
+        : [middleware]
+      : []
+  });
 }

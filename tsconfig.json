@@ -103,10 +103,8 @@
     "src"
   ], // Specify files to include
   "exclude": [
-    "node_modules",
     "node_modules/",
     "dist/",
-    "examples/",
-    "tests/"
+    "eslint.config.mjs"
   ] // Specify files to exclude
 }

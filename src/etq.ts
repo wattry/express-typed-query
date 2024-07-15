@@ -1,3 +1,4 @@
+import { Router } from 'express';
 import qs from 'qs';
 
 /* ************************************************************************************************
@@ -6,6 +7,7 @@ import qs from 'qs';
 import { Application, Request, Response, NextFunction } from 'express';
 
 import { Parser } from './parser';
+import { IError, IRegisterOptions } from './types';
 
 /* ************************************************************************************************
  *                                          Custom Types
@@ -145,24 +147,31 @@ const etq = {
   qsOptions
 };
 
-export function register(router: any, options: { disable?: TDisable | null, global?: boolean } = {}) {
-  if (!router) {
+export function init(app: Application) {
+  app.set(expressQsStringParser, false);
+}
+
+export function register(router: Router, options: IRegisterOptions = {}) {
+  if (router) {
+    const { disable = [], global = true } = options;
+    const routerStack = router.stack;
+    const layer = routerStack[routerStack.length - 1];
+
+    if (layer.route) {
+      const routeStack = layer.route.stack;
+      const routeLayer = routeStack[routeStack.length - 1];
+      const method = routeLayer.method;
+
+      pathDisableKeys.set(
+        layer.route.path,
+        method.toUpperCase(),
+        global ? [...ignoreKeys.getInput(), ...disable as TDisable] : disable as TDisable,
+        global
+      );
+    }
+  } else {
     throw new ReferenceError('Express router instance required');
   }
-  const { disable = [], global = true } = options;
-  const routerStack = router.stack;
-  const layer = routerStack[routerStack.length - 1];
-
-  const routeStack = layer.route.stack;
-  const routeLayer = routeStack[routeStack.length - 1];
-  const method = routeLayer.method;
-
-  pathDisableKeys.set(
-    layer.route.path,
-    method.toUpperCase(),
-    global ? [...ignoreKeys.getInput(), ...disable as TDisable] : disable as TDisable,
-    global
-  );
 }
 
 export function Etq(app: Application, logger: ILogger, options: IEtqOptions): void {
@@ -194,32 +203,42 @@ export function Etq(app: Application, logger: ILogger, options: IEtqOptions): vo
         const { originalUrl, method } = request;
         // Get the path and the query string.
         const [path, queryString] = originalUrl.split('?');
-        logger.debug('method', method, 'path', path);
-
+        
         // Convert the query string into a map.
         const pathDisableMap: { global: TGlobal, methods: TDisableMap } = pathDisableKeys.get(path, method);
         
-        // If no endpoint route ignores are provided and there are globals, we enfoce the globals unless they have disabled globals for this route.
+        // If no endpoint route ignores are provided and there are globals, we enforce the globals unless they have disabled globals for this route.
         const disabled = pathDisableMap.methods.size
           ? pathDisableMap.methods
           : pathDisableMap.global
             ? disableMap
             : pathDisableMap.methods;
+
         const parser = etq.get(logger, disabled);
 
         (request.query as IAnyObject) = parser(queryString);
 
         next();
-      } catch (error: any) {
-        logger.error('An error occurred parsing query string please check your configuration', error.message);
+      } catch (error: unknown) {
+        logger.error('An error occurred parsing query string please check your configuration', (error as IError).message);
         next(error);
       }
     };
 
-    if (middleware) {
-      middleware.push(handler);
+    if (middleware.length > 2) {
+      throw new Error('Middleware array limited to 2. The first middleware is run before parsing and the second after');
+    } else if (middleware.length >= 1) {
+      const [before, after] = middleware;
 
-      app.use(...middleware);
+      if (before) {
+        app.use(before);
+      }
+
+      app.use(handler);
+
+      if (after) {
+        app.use(after);
+      }
     } else {
       app.use(handler);
     }

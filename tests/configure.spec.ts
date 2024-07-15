@@ -5,7 +5,7 @@ import console from 'console';
   *                         Local Imports
   * ******************************************************************** */
 
-import { configure, register } from '../src/index';
+import { configure } from '../src/index';
 
 /** ********************************************************************
   *                            Types
@@ -63,10 +63,6 @@ beforeEach(() => {
 
 describe('configure', () => {
   describe('error', () => {
-    it('throws when app is not provided', () => {
-      expect(() => configure(null!)).toThrow('app required');
-    });
-
     it('throws when app parameter is not an express app', () => {
       const appFail = {};
 

@@ -1,5 +1,5 @@
 import { configure } from "./configure";
-import { register } from "./etq";
+import { init, register } from "./etq";
 
-export { configure, register };
-export default { configure, register };
+export { configure, register, init };
+export default { configure, register, init };
