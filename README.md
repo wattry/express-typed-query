@@ -24,9 +24,7 @@ pnpm add express-typed-query
 
 ## Usage
 
-### Global
-
-#### MJS / TS
+### MJS / TS
 ```javascript
 import express from 'express';
 import etq from 'express-typed-query';
@@ -73,7 +71,7 @@ register(router.get('/path', (req, res, next) => { ... }), options);
 // ...app middleware and routes...
 ```
 
-#### CommonJs
+### CommonJs
 ```javascript
 const express = require('express');
 const etq = require('express-typed-query');
