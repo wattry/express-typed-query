@@ -7,6 +7,51 @@
 #
 # To enable this hook, rename this file to "pre-commit".
 
-pnpm run ci
+src_diffs=$(git diff --cached --name-only ./src)
+test_diffs=$(git diff --cached --name-only ./tests)
+package_diffs=$(git diff --cached --name-only ./package.json);
 
-# git diff --cached --name-only
+if [[ -n "${package_diffs}" ]];
+then
+  echo "package.json changes detected installing modules"
+  pnpm install
+fi
+
+if [[ -n "${src_diffs}" ]] || [[ -n "${test_diffs}" ]];
+then
+  pnpm run ci
+else
+  echo "No test diffs"
+fi
+
+if [[ -n "${src_diffs}" ]] || [[ -n "${package_diffs}" ]];
+then
+  package_version=$(pnpm info express-typed-query version)
+
+  node -e "
+    const [, version, diffs, src_diffs] = process.argv;
+    const package = require('./package.json');
+
+    console.log('latest v', version);
+    console.log('curent v', package.version);
+    if (package.version === version && (diffs || src_diffs)) {
+      console.error('Changes detected please increment the package.json version');
+      process.exit(1);
+    } else if (package.version !== version && (diffs || src_diffs)) {
+      console.error('package.json version updated publishing new version');
+      process.exit(0);
+    } else {
+      console.error('no version changed required');
+      process.exit(1);
+    }
+  " -- $package_version $package_diffs $src_diffs
+fi
+
+node_exit_status=$?
+# Check the exit code and decide to exit the Bash script
+if [ $node_exit_status -eq 0 ]; then
+    echo "Node.js script executed successfully."
+    exit 0  # Exit the Bash script with success status
+else
+  exit 1  # Exit the Bash script with failure status
+fi
